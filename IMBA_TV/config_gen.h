@@ -17,16 +17,19 @@ struct __attribute__((packed)) fw_config_t
   uint8_t pwm_alarm_source;  // Порог
   uint8_t pwm_alarm_threshold;  // Свой порог ШИМ
   uint8_t brightness;  // Яркость
-  uint8_t intro;  // Заставка при включении
-  uint8_t poweroff_animation;  // Анимация выключения, как у старого телевизора
+  uint8_t intro_logo;  // Логотип при включении
+  uint8_t intro_wave;  // Волна
+  uint8_t intro_break;  // Разрушение
+  uint8_t intro_explosion;  // Взрыв
+  uint8_t poweroff_animation;  // Анимация выключения
   uint16_t power_on_ms;  // Удержание для включения
   uint16_t power_off_ms;  // Удержание для выключения
   uint8_t ble_update;  // Разрешить обновление прошивки по Bluetooth
 };
 
-static_assert(sizeof(fw_config_t) == 17, "config.json и fw_config_t разошлись");
+static_assert(sizeof(fw_config_t) == 20, "config.json и fw_config_t разошлись");
 
-#define FW_CONFIG_DEFAULTS { 1, 1, 1, 1, 1512, 1, 0, 80, 100, 2, 1, 500, 1000, 1 }
+#define FW_CONFIG_DEFAULTS { 1, 1, 1, 1, 1512, 1, 0, 80, 100, 1, 1, 1, 1, 1, 500, 1000, 1 }
 
 enum
 {
@@ -39,12 +42,6 @@ enum
   CONFIG_WHEEL_VOLTAGE_X10_42S = 1764,
   CONFIG_PWM_ALARM_SOURCE_APP = 0,
   CONFIG_PWM_ALARM_SOURCE_FIXED = 1,
-  CONFIG_INTRO_NONE = 0,
-  CONFIG_INTRO_LOGO = 1,
-  CONFIG_INTRO_RANDOM = 2,
-  CONFIG_INTRO_WAVE = 3,
-  CONFIG_INTRO_BREAK = 4,
-  CONFIG_INTRO_EXPLOSION = 5,
 };
 
 // Значения вне допустимых заменяются значениями по умолчанию
@@ -59,7 +56,10 @@ static inline void configSanitize(fw_config_t& c)
   switch(c.pwm_alarm_source) { case 0: case 1: break; default: c.pwm_alarm_source = 0; }
   if(c.pwm_alarm_threshold < 30 || c.pwm_alarm_threshold > 99) c.pwm_alarm_threshold = 80;
   if(c.brightness < 5 || c.brightness > 100) c.brightness = 100;
-  switch(c.intro) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.intro = 2; }
+  if(c.intro_logo > 1) c.intro_logo = 1;
+  if(c.intro_wave > 1) c.intro_wave = 1;
+  if(c.intro_break > 1) c.intro_break = 1;
+  if(c.intro_explosion > 1) c.intro_explosion = 1;
   if(c.poweroff_animation > 1) c.poweroff_animation = 1;
   if(c.power_on_ms < 100 || c.power_on_ms > 3000) c.power_on_ms = 500;
   if(c.power_off_ms < 500 || c.power_off_ms > 5000) c.power_off_ms = 1000;
@@ -87,21 +87,28 @@ static inline void configSanitize(fw_config_t& c)
   "\"id\":\"APP\",\"label\":\"Из настроек приложения LoEUC\"},{\"value\":1,\"id\":\"FIXED\",\"label\":\"Свой\"}],\"dep" \
   "ends\":{\"pwm_alarm\":true},\"offset\":7,\"size\":1},{\"key\":\"pwm_alarm_threshold\",\"type\":\"u8\",\"default\"" \
   ":80,\"min\":30,\"max\":99,\"unit\":\"%\",\"label\":\"Свой порог ШИМ\",\"depends\":{\"pwm_alarm\":true,\"pwm_alarm" \
-  "_source\":1},\"offset\":8,\"size\":1}]},{\"title\":\"Дисплей и анимации\",\"help\":\"Яркость, заставка при в" \
-  "ключении и анимация выключения\",\"fields\":[{\"key\":\"brightness\",\"type\":\"u8\",\"default\":100,\"min\":5," \
-  "\"max\":100,\"step\":5,\"unit\":\"%\",\"widget\":\"range\",\"label\":\"Яркость\",\"offset\":9,\"size\":1},{\"key\":\"in" \
-  "tro\",\"type\":\"u8\",\"default\":2,\"label\":\"Заставка при включении\",\"options\":[{\"value\":0,\"id\":\"NONE\"," \
-  "\"label\":\"Без заставки\"},{\"value\":1,\"id\":\"LOGO\",\"label\":\"Только логотип\"},{\"value\":2,\"id\":\"RANDOM" \
-  "\",\"label\":\"Случайная анимация\"},{\"value\":3,\"id\":\"WAVE\",\"label\":\"Волна\"},{\"value\":4,\"id\":\"BREAK\"," \
-  "\"label\":\"Разрушение\"},{\"value\":5,\"id\":\"EXPLOSION\",\"label\":\"Взрыв\"}],\"offset\":10,\"size\":1},{\"key\"" \
-  ":\"poweroff_animation\",\"type\":\"bool\",\"default\":true,\"label\":\"Анимация выключения, как у старого т" \
-  "елевизора\",\"offset\":11,\"size\":1}]},{\"title\":\"Кнопка\",\"help\":\"Сколько держать кнопку, чтобы включ" \
-  "ить и выключить дисплей\",\"fields\":[{\"key\":\"power_on_ms\",\"type\":\"u16\",\"default\":500,\"min\":100,\"ma" \
-  "x\":3000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для включения\",\"offset\":12,\"size\":2},{\"key\":\"p" \
-  "ower_off_ms\",\"type\":\"u16\",\"default\":1000,\"min\":500,\"max\":5000,\"step\":100,\"unit\":\"мс\",\"label\":\"Уд" \
-  "ержание для выключения\",\"help\":\"Более короткое нажатие переключает экран\",\"offset\":14,\"size\":2}]" \
-  "},{\"title\":\"Обновление по Bluetooth\",\"help\":\"Прошивка с телефона без кабеля\",\"fields\":[{\"key\":\"b" \
-  "le_update\",\"type\":\"bool\",\"default\":true,\"label\":\"Разрешить обновление прошивки по Bluetooth\",\"he" \
-  "lp\":\"Режим обновления включается, только если при включении держать кнопку ещё 3 секунды после т" \
-  "ого, как загорится экран, и заряд не ниже 30%. В обычной работе прошить дисплей по Bluetooth нел" \
-  "ьзя\",\"offset\":16,\"size\":1}]}]}"
+  "_source\":1},\"offset\":8,\"size\":1}]},{\"title\":\"Дисплей\",\"help\":\"Яркость экрана\",\"fields\":[{\"key\":\"" \
+  "brightness\",\"type\":\"u8\",\"default\":100,\"min\":5,\"max\":100,\"step\":5,\"unit\":\"%\",\"widget\":\"range\",\"la" \
+  "bel\":\"Яркость\",\"offset\":9,\"size\":1}]},{\"title\":\"Анимации\",\"help\":\"Заставка при включении и анима" \
+  "ция выключения\",\"fields\":[{\"key\":\"intro_logo\",\"type\":\"bool\",\"default\":true,\"section\":\"При включе" \
+  "нии\",\"label\":\"Логотип при включении\",\"help\":\"После логотипа играет случайная из отмеченных заста" \
+  "вок. Без логотипа данные появляются сразу\",\"preview\":\"logo\",\"offset\":10,\"size\":1},{\"key\":\"intro_" \
+  "wave\",\"type\":\"bool\",\"default\":true,\"label\":\"Волна\",\"help\":\"Волна с пузырями проходит слева напра" \
+  "во и открывает данные\",\"preview\":\"wave\",\"depends\":{\"intro_logo\":true},\"subitem\":true,\"offset\":11" \
+  ",\"size\":1},{\"key\":\"intro_break\",\"type\":\"bool\",\"default\":true,\"label\":\"Разрушение\",\"help\":\"Логоти" \
+  "п трескается и рассыпается на куски\",\"preview\":\"break\",\"depends\":{\"intro_logo\":true},\"subitem\":t" \
+  "rue,\"offset\":12,\"size\":1},{\"key\":\"intro_explosion\",\"type\":\"bool\",\"default\":true,\"label\":\"Взрыв\"," \
+  "\"help\":\"Логотип разлетается облаком частиц, как TNT в Minecraft\",\"preview\":\"explosion\",\"depends\"" \
+  ":{\"intro_logo\":true},\"subitem\":true,\"offset\":13,\"size\":1},{\"key\":\"poweroff_animation\",\"type\":\"bo" \
+  "ol\",\"default\":true,\"section\":\"При выключении\",\"label\":\"Анимация выключения\",\"help\":\"Экран сжимае" \
+  "тся в линию, затем в точку и гаснет, как у старого телевизора\",\"preview\":\"poweroff\",\"offset\":14," \
+  "\"size\":1}]},{\"title\":\"Кнопка\",\"help\":\"Сколько держать кнопку, чтобы включить и выключить дисплей" \
+  "\",\"fields\":[{\"key\":\"power_on_ms\",\"type\":\"u16\",\"default\":500,\"min\":100,\"max\":3000,\"step\":100,\"uni" \
+  "t\":\"мс\",\"label\":\"Удержание для включения\",\"offset\":15,\"size\":2},{\"key\":\"power_off_ms\",\"type\":\"u1" \
+  "6\",\"default\":1000,\"min\":500,\"max\":5000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для выключения\"" \
+  ",\"help\":\"Более короткое нажатие переключает экран\",\"offset\":17,\"size\":2}]},{\"title\":\"Обновление " \
+  "по Bluetooth\",\"help\":\"Прошивка с телефона без кабеля\",\"fields\":[{\"key\":\"ble_update\",\"type\":\"bool" \
+  "\",\"default\":true,\"label\":\"Разрешить обновление прошивки по Bluetooth\",\"help\":\"Режим обновления в" \
+  "ключается, только если при включении держать кнопку ещё 3 секунды после того, как загорится экра" \
+  "н, и заряд не ниже 30%. В обычной работе прошить дисплей по Bluetooth нельзя\",\"offset\":19,\"size\"" \
+  ":1}]}]}"

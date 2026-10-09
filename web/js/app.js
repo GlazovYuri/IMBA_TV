@@ -471,7 +471,24 @@ function renderConfig(values) {
 
     const fields = document.createElement('div');
     fields.className = 'fields';
-    for (const f of group.fields) fields.append(renderField(f, group));
+    // section начинает подраздел группы; подпункты собираются в блок под родительской галочкой
+    let sub = null;
+    for (const f of group.fields) {
+      if (f.section) fields.append(textEl('h4', 'fields-section', f.section));
+      if (!f.subitem) {
+        sub = null;
+        fields.append(renderField(f, group));
+        continue;
+      }
+      if (!sub) {
+        sub = document.createElement('div');
+        sub.className = 'subfields';
+        sub.setAttribute('role', 'group');
+        sub.setAttribute('aria-label', `Варианты: ${fields.lastElementChild?.querySelector('.field-label')?.textContent ?? ''}`);
+        fields.append(sub);
+      }
+      sub.append(renderField(f, group));
+    }
     details.append(summary, fields);
     form.append(details);
   }
@@ -513,6 +530,10 @@ function renderField(f, group) {
     input.checked = value;
     label.append(input, textEl('span', 'field-label', f.label));
     box.append(label);
+    if (f.preview) {
+      box.classList.add('field-preview');
+      box.append(previewFigure(f));
+    }
   } else {
     const label = textEl('label', 'field-label', f.label);
     label.htmlFor = id;
@@ -586,10 +607,37 @@ function renderField(f, group) {
   return box;
 }
 
+// Превью анимации с дисплея: гифка из web/previews (снята tools/render_previews.py),
+// при отключённой в системе анимации - один кадр
+function previewFigure(f) {
+  const picture = document.createElement('picture');
+  picture.className = 'preview';
+  const still = document.createElement('source');
+  still.media = '(prefers-reduced-motion: reduce)';
+  still.srcset = `previews/${f.preview}.png`;
+  const img = document.createElement('img');
+  img.src = `previews/${f.preview}.gif`;
+  img.width = 128;
+  img.height = 64;
+  img.alt = `${f.label}: как это выглядит на дисплее`;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  // превью для этой анимации на сайте нет: остаётся обычная галочка
+  img.addEventListener('error', () => picture.remove());
+  picture.append(still, img);
+  return picture;
+}
+
 function updateVisibility() {
   for (const f of state.fw?.config?.fields ?? []) {
     const box = $('config-form').querySelector(`[data-key="${f.key}"]`);
     const visible = isVisible(f, state.values);
+    // подпункт не прячется, а гаснет: видно, что без родительской галочки он не работает
+    if (f.subitem) {
+      box.classList.toggle('field-off', !visible);
+      box.querySelectorAll('input, select').forEach((el) => { el.disabled = state.busy || !visible; });
+      continue;
+    }
     box.hidden = !visible;
     // скрытое поле с ошибкой не мешает прошивке: в образ попадёт последнее верное значение
     if (!visible && state.invalid.delete(f.key)) {
@@ -656,6 +704,7 @@ function setBusy(busy) {
   state.busy = busy;
   document.querySelectorAll('input[name="firmware"], #file-pick, #show-all, .catalog-row, #config-form input, #config-form select, #config-reset, [role="tab"]')
     .forEach((el) => { el.disabled = busy; });
+  if (!busy) updateVisibility();
   updateButtons();
 }
 

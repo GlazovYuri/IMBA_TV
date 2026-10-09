@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues } from '../js/config.js';
 import { readZip, loadFirmware, makeUf2, withImageCrc, crc16, FirmwareError } from '../js/firmware.js';
 import { schema, fields, defaults, makeBlock, withBlock } from './config-block.mjs';
@@ -17,6 +17,30 @@ test('встроенное описание совпадает с config.json', 
   assert.deepEqual(defaults, fields.map((f) => Number(f.default)));
 });
 
+test('у каждого превью в config.json есть гифка и кадр для режима без анимации', () => {
+  const previews = source.groups.flatMap((g) => g.fields).filter((f) => f.preview).map((f) => f.preview);
+  assert.ok(previews.length > 0);
+  for (const name of previews) {
+    for (const ext of ['gif', 'png']) {
+      assert.ok(existsSync(new URL(`../previews/${name}.${ext}`, import.meta.url)), `нет web/previews/${name}.${ext}`);
+    }
+  }
+});
+
+test('подпункт зависит от галочки выше в той же группе', () => {
+  for (const group of source.groups) {
+    group.fields.forEach((f, i) => {
+      if (!f.subitem) return;
+      const parents = Object.keys(f.depends ?? {});
+      assert.ok(parents.length > 0, `${f.key}: у подпункта нет depends`);
+      for (const key of parents) {
+        const parent = group.fields.slice(0, i).find((g) => g.key === key);
+        assert.ok(parent && parent.type === 'bool', `${f.key}: подпункт должен зависеть от галочки выше в группе «${group.title}»`);
+      }
+    });
+  }
+});
+
 test('прошивка без блока настроек', () => {
   assert.equal(findConfig(appBin), null);
 });
@@ -30,7 +54,7 @@ test('значения по умолчанию читаются из образ�
 test('настройки записываются только в блок', () => {
   const bin = withBlock(appBin, 2000);
   const cfg = findConfig(bin);
-  const values = { ...defaultValues(cfg), screen_grid: false, brightness: 40, power_off_ms: 2500, intro: 4 };
+  const values = { ...defaultValues(cfg), screen_grid: false, brightness: 40, power_off_ms: 2500, intro_break: false };
   const out = applyValues(bin, cfg, values);
 
   assert.deepEqual(readValues(out, cfg), values);
@@ -45,7 +69,7 @@ test('недопустимые значения отклоняются', () => {
   assert.equal(checkValue(byKey.brightness, '55'), 55);
   assert.throws(() => checkValue(byKey.brightness, 0), /от 5 до 100/);
   assert.throws(() => checkValue(byKey.power_on_ms, '1.5'), /целое/);
-  assert.throws(() => checkValue(byKey.intro, 9), /недопустимое/);
+  assert.throws(() => checkValue(byKey.pwm_alarm_source, 9), /недопустимое/);
   assert.equal(checkValue(byKey.wheel_voltage_x10, '840'), 840);
   assert.throws(() => checkValue(byKey.screen_grid, 1), FirmwareError);
 
@@ -58,13 +82,18 @@ test('зависимые поля', () => {
   assert.equal(isVisible(threshold, { pwm_alarm: true, pwm_alarm_source: 0 }), false);
   assert.equal(isVisible(threshold, { pwm_alarm: true, pwm_alarm_source: 1 }), true);
   assert.equal(isVisible(threshold, { pwm_alarm: false, pwm_alarm_source: 1 }), false);
+
+  // заставки играют только после логотипа
+  const wave = fields.find((f) => f.key === 'intro_wave');
+  assert.equal(isVisible(wave, { intro_logo: true }), true);
+  assert.equal(isVisible(wave, { intro_logo: false }), false);
 });
 
 test('сохранённые настройки применяются, если подходят прошивке', () => {
   const cfg = findConfig(withBlock(appBin));
-  const merged = mergeValues(cfg, defaultValues(cfg), { brightness: 30, intro: 42, unknown: 1, screen_grid: false });
+  const merged = mergeValues(cfg, defaultValues(cfg), { brightness: 30, pwm_alarm_source: 42, unknown: 1, screen_grid: false });
   assert.equal(merged.brightness, 30);
-  assert.equal(merged.intro, 2);
+  assert.equal(merged.pwm_alarm_source, 0);
   assert.equal(merged.screen_grid, false);
   assert.ok(!('unknown' in merged));
 });

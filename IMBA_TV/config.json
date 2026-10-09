@@ -83,8 +83,8 @@
       ]
     },
     {
-      "title": "Дисплей и анимации",
-      "help": "Яркость, заставка при включении и анимация выключения",
+      "title": "Дисплей",
+      "help": "Яркость экрана",
       "fields": [
         {
           "key": "brightness",
@@ -96,26 +96,60 @@
           "unit": "%",
           "widget": "range",
           "label": "Яркость"
+        }
+      ]
+    },
+    {
+      "title": "Анимации",
+      "help": "Заставка при включении и анимация выключения",
+      "fields": [
+        {
+          "key": "intro_logo",
+          "type": "bool",
+          "default": true,
+          "section": "При включении",
+          "label": "Логотип при включении",
+          "help": "После логотипа играет случайная из отмеченных заставок. Без логотипа данные появляются сразу",
+          "preview": "logo"
         },
         {
-          "key": "intro",
-          "type": "u8",
-          "default": 2,
-          "label": "Заставка при включении",
-          "options": [
-            { "value": 0, "id": "NONE", "label": "Без заставки" },
-            { "value": 1, "id": "LOGO", "label": "Только логотип" },
-            { "value": 2, "id": "RANDOM", "label": "Случайная анимация" },
-            { "value": 3, "id": "WAVE", "label": "Волна" },
-            { "value": 4, "id": "BREAK", "label": "Разрушение" },
-            { "value": 5, "id": "EXPLOSION", "label": "Взрыв" }
-          ]
+          "key": "intro_wave",
+          "type": "bool",
+          "default": true,
+          "label": "Волна",
+          "help": "Волна с пузырями проходит слева направо и открывает данные",
+          "preview": "wave",
+          "depends": { "intro_logo": true },
+          "subitem": true
+        },
+        {
+          "key": "intro_break",
+          "type": "bool",
+          "default": true,
+          "label": "Разрушение",
+          "help": "Логотип трескается и рассыпается на куски",
+          "preview": "break",
+          "depends": { "intro_logo": true },
+          "subitem": true
+        },
+        {
+          "key": "intro_explosion",
+          "type": "bool",
+          "default": true,
+          "label": "Взрыв",
+          "help": "Логотип разлетается облаком частиц, как TNT в Minecraft",
+          "preview": "explosion",
+          "depends": { "intro_logo": true },
+          "subitem": true
         },
         {
           "key": "poweroff_animation",
           "type": "bool",
           "default": true,
-          "label": "Анимация выключения, как у старого телевизора"
+          "section": "При выключении",
+          "label": "Анимация выключения",
+          "help": "Экран сжимается в линию, затем в точку и гаснет, как у старого телевизора",
+          "preview": "poweroff"
         }
       ]
     },

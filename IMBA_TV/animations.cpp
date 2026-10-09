@@ -605,8 +605,8 @@ void displayPlayIntroNum(int anim, uint32_t seed, uint8_t dev_charge, bool is_ch
 
 bool displayIntroBegin(bool watch_button, uint8_t dev_charge, bool is_charging, euc_data_t& data)
 {
-  // без заставки сразу интерфейс и ждём, только пока держат кнопку
-  bool no_intro = (config().intro == CONFIG_INTRO_NONE);
+  // без логотипа сразу интерфейс и ждём, только пока держат кнопку
+  bool no_intro = !config().intro_logo;
   if(no_intro) displayDrawIface(dev_charge, is_charging, data);
   else displayDrawLogo();
 
@@ -626,12 +626,20 @@ bool displayIntroBegin(bool watch_button, uint8_t dev_charge, bool is_charging, 
 
 void displayIntroFinish(uint8_t dev_charge, bool is_charging, euc_data_t& data)
 {
-  uint8_t intro = config().intro;
-  if(intro == CONFIG_INTRO_NONE || intro == CONFIG_INTRO_LOGO) return;
+  const fw_config_t& cfg = config();
+  if(!cfg.intro_logo) return;
+
+  // отмеченные заставки: волна, разрушение, взрыв - в порядке introAnimation.
+  // Ни одной - после логотипа сразу интерфейс
+  int enabled[3];
+  int enabled_cnt = 0;
+  if(cfg.intro_wave) enabled[enabled_cnt++] = 0;
+  if(cfg.intro_break) enabled[enabled_cnt++] = 1;
+  if(cfg.intro_explosion) enabled[enabled_cnt++] = 2;
+  if(!enabled_cnt) return;
 
   uint32_t seed = introSeed();
-  // волна, разрушение, взрыв - в порядке introAnimation
-  int anim = (intro == CONFIG_INTRO_RANDOM) ? (seed >> 16) % 3 : intro - CONFIG_INTRO_WAVE;
+  int anim = enabled[(seed >> 16) % enabled_cnt];
   rnd_state = seed;
   introAnimation(anim, dev_charge, is_charging, data);
 }
