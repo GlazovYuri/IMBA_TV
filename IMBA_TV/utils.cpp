@@ -1,10 +1,9 @@
 #include "utils.h"
+#include "config.h"
 #include <bluefruit.h>
 #include <Arduino.h>
 
 static const uint8_t button_pin = 0;
-static const uint32_t on_delay = 500; //ms
-static const uint32_t off_delay = 1000; //ms
 static const uint32_t button_period = 20; //ms
 
 static bool button_hold = false;
@@ -64,7 +63,7 @@ static bool buttonState()
 
 bool buttonWaitPowerup()
 {
-  uint16_t cnt = on_delay / button_period;
+  uint16_t cnt = config().power_on_ms / button_period;
   while(cnt--)
   {
     if(!buttonState()) return false;
@@ -75,30 +74,38 @@ bool buttonWaitPowerup()
   return true;
 }
 
-bool buttonIsLongPress()
+button_event_t buttonPoll()
 {
   bool state = buttonState();
   if(button_hold)
   {
     if(!state) button_hold = false;
-    return false;
+    return BUTTON_NONE;
   }
 
-  static uint32_t unpressed_time = 0;
+  static bool pressed = false;
+  static uint32_t press_time = 0;
   uint32_t time = millis();
+
   if(state)
   {
-    if(time - unpressed_time > off_delay)
+    if(!pressed)
     {
-      return true;
+      pressed = true;
+      press_time = time;
+    }
+    else if(time - press_time > config().power_off_ms)
+    {
+      return BUTTON_LONG;
     }
   }
-  else
+  else if(pressed)
   {
-    unpressed_time = time;
+    pressed = false;
+    if(time - press_time <= config().power_off_ms) return BUTTON_SHORT;
   }
 
-  return false;
+  return BUTTON_NONE;
 }
 
 void buttonWaitRelease()

@@ -1,0 +1,175 @@
+# Сборка прошивки. На любой ветке — проверочная сборка с артефактом,
+# на основной ветке — новая версия: тег vX.Y.Z, релиз с .zip/.hex/.uf2 и обновление сайта.
+name: Firmware
+
+on:
+  push:
+    paths:
+      - 'IMBA_TV/**'
+      - 'boards/**'
+      - '.github/workflows/firmware.yml'
+      - '.github/scripts/hex2uf2.py'
+      - 'tools/gen_config.py'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Какую часть версии увеличить (на основной ветке)
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+# Номер версии берётся из последнего тега, поэтому сборки одной ветки идут по очереди
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CORE_VERSION: 1.7.0
+  FQBN: adafruit:nrf52:imba_pro_micro
+  # Версия первого релиза, пока в репозитории нет ни одного тега vX.Y.Z
+  INITIAL_VERSION: 0.5.0
+  GYVEROLED_VERSION: 1.6.4
+  ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS: https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # нужны теги
+
+      - name: Determine version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump || 'patch' }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          last=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+          if [ -z "$last" ]; then
+            next=$INITIAL_VERSION
+          else
+            IFS=. read -r major minor patch <<< "${last#v}"
+            case "$BUMP" in
+              major) next="$((major + 1)).0.0" ;;
+              minor) next="$major.$((minor + 1)).0" ;;
+              *)     next="$major.$minor.$((patch + 1))" ;;
+            esac
+          fi
+
+          if [ "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH" ]; then
+            version=$next
+            release=true
+          else
+            version="$next-dev.${GITHUB_SHA::7}"
+            release=false
+          fi
+          echo "Предыдущая версия: ${last:-нет}, новая: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Ядро Adafruit вызывает adafruit-nrfutil при сборке, чтобы получить DFU-пакет (.zip)
+      - name: Install adafruit-nrfutil
+        run: pip install adafruit-nrfutil
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: Cache Arduino core
+        uses: actions/cache@v4
+        with:
+          path: ~/.arduino15/packages
+          key: arduino-${{ runner.os }}-adafruit-nrf52-${{ env.CORE_VERSION }}
+
+      - name: Install core, board and libraries
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install "adafruit:nrf52@$CORE_VERSION"
+          arduino-cli lib install "GyverOLED@$GYVEROLED_VERSION"
+          arduino-cli lib list
+
+          # Плата IMBA nRF52840 ProMicro ставится поверх ядра, как описано в README
+          core="$HOME/.arduino15/packages/adafruit/hardware/nrf52/$CORE_VERSION"
+          cp boards/boards.txt "$core/boards.txt"
+          cp -r boards/imba_pro_micro "$core/variants/"
+
+      - name: Check config_gen.h
+        run: python3 tools/gen_config.py --check
+
+      - name: Build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          printf '#pragma once\n\n#define FW_VERSION "%s"\n' "$VERSION" > IMBA_TV/version.h
+          arduino-cli compile --fqbn "$FQBN" --output-dir build IMBA_TV
+          ls -l build
+
+          mkdir dist
+          cp build/IMBA_TV.ino.hex "dist/IMBA_TV-$VERSION.hex"
+          cp build/IMBA_TV.ino.zip "dist/IMBA_TV-$VERSION.zip"
+          python3 .github/scripts/hex2uf2.py "dist/IMBA_TV-$VERSION.hex" "dist/IMBA_TV-$VERSION.uf2"
+          ls -l dist
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Те же файлы потом прошиваются через сайт — проверяем их его же кодом
+      - name: Check firmware files with web flasher
+        run: node web/test/check-build.mjs dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IMBA_TV-${{ steps.version.outputs.version }}
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: needs.build.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: IMBA_TV-${{ needs.build.outputs.version }}
+          path: dist
+
+      - name: Release notes
+        run: |
+          last=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+          git log --no-merges -n 50 --pretty='format:- %s' ${last:+$last..}HEAD > notes.md
+          cat notes.md
+
+      - name: Publish tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSION" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "v$VERSION" \
+            --notes-file notes.md
+
+  pages:
+    needs: release
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
