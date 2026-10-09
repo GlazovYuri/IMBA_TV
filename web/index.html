@@ -23,11 +23,7 @@
       </div>
     </header>
 
-    <div id="unsupported" class="notice notice-warn" hidden>
-      Этот браузер не умеет работать с USB-портами. Откройте страницу в Chrome, Edge,
-      Яндекс Браузере или Opera на компьютере — или скачайте UF2-файл и прошейте плату вручную
-      (см. <a href="#manual">ниже</a>).
-    </div>
+    <div id="unsupported" class="notice notice-warn" hidden></div>
 
     <section class="card" aria-labelledby="step1-title">
       <h2 id="step1-title"><span class="step">1</span>Выберите прошивку</h2>
@@ -74,16 +70,41 @@
 
     <section class="card" aria-labelledby="step2-title">
       <h2 id="step2-title"><span class="step">3</span>Прошейте плату</h2>
-      <ol class="steps">
-        <li>Подключите IMBA TV к компьютеру USB-кабелем с передачей данных — дисплей включится сам.</li>
-        <li>Нажмите «Прошить» и выберите в списке устройство <b>IMBA TV</b>.</li>
-        <li>Плата перезагрузится в режим загрузчика. Если браузер попросит, выберите новое устройство ещё раз.</li>
-      </ol>
 
-      <div class="actions">
-        <button type="button" id="flash" class="button button-primary" disabled>Прошить</button>
-        <button type="button" id="pick-bootloader" class="button button-primary" hidden>Выбрать порт загрузчика</button>
-        <button type="button" id="cancel" class="button" hidden>Отмена</button>
+      <div class="tabs" role="tablist" aria-label="Способ прошивки">
+        <button type="button" role="tab" id="tab-usb" aria-controls="panel-usb" aria-selected="true">USB-кабель</button>
+        <button type="button" role="tab" id="tab-ble" aria-controls="panel-ble" aria-selected="false">Bluetooth</button>
+      </div>
+
+      <div id="panel-usb" role="tabpanel" aria-labelledby="tab-usb">
+        <p id="usb-unsupported" class="notice notice-warn" hidden>
+          Этот браузер не умеет работать с USB-портами. Нужен Chrome, Edge, Яндекс Браузер или Opera на компьютере.
+        </p>
+        <ol class="steps">
+          <li>Подключите IMBA TV к компьютеру USB-кабелем с передачей данных — дисплей включится сам.</li>
+          <li>Нажмите «Прошить» и выберите в списке устройство <b>IMBA TV</b>.</li>
+          <li>Плата перезагрузится в режим загрузчика. Если браузер попросит, выберите новое устройство ещё раз.</li>
+        </ol>
+        <div class="actions">
+          <button type="button" id="flash" class="button button-primary" disabled>Прошить</button>
+          <button type="button" id="pick-bootloader" class="button button-primary" hidden>Выбрать порт загрузчика</button>
+          <button type="button" id="cancel" class="button" hidden>Отмена</button>
+        </div>
+      </div>
+
+      <div id="panel-ble" role="tabpanel" aria-labelledby="tab-ble" hidden>
+        <p id="ble-unsupported" class="notice notice-warn" hidden></p>
+        <ol class="steps">
+          <li>Закройте LoEUC на телефоне, чтобы он не занял подключение к дисплею.</li>
+          <li>Выключите дисплей. Включите его кнопкой и продолжайте держать ещё 3 секунды,
+            пока полоса не заполнится и не появится «Обновление по Bluetooth».</li>
+          <li>Нажмите «Прошить по Bluetooth» и выберите <b>IMBA TV</b>. Держите телефон рядом с дисплеем.</li>
+        </ol>
+        <p class="muted hint">Если надпись не появляется, на дисплее старая прошивка или обновление по Bluetooth
+          выключено в настройках. Тогда один раз прошейте его по USB-кабелю.</p>
+        <div class="actions">
+          <button type="button" id="flash-ble" class="button button-primary" disabled>Прошить по Bluetooth</button>
+        </div>
       </div>
 
       <div id="status" class="status" role="status" aria-live="polite" hidden></div>
@@ -96,7 +117,7 @@
         <summary>Журнал</summary>
         <pre id="log" class="log"></pre>
       </details>
-      <details class="more">
+      <details class="more" id="usb-advanced">
         <summary>Дополнительно</summary>
         <label class="checkbox">
           <input type="checkbox" id="all-ports">
@@ -106,16 +127,30 @@
     </section>
 
     <section class="card" id="manual" aria-labelledby="manual-title">
-      <h2 id="manual-title">Прошивка вручную</h2>
-      <p>Если браузер не поддерживает Web Serial, скачайте файл выбранной версии.
-        В файл <code>.uf2</code> с настройками попадут значения из шага 2.</p>
+      <h2 id="manual-title">Скачать прошивку</h2>
+      <p>Файлы выбранной версии. В файлы «с настройками» попадут значения из шага 2.</p>
       <div id="downloads" class="downloads"><span class="muted">Выберите версию выше</span></div>
-      <ol class="steps">
-        <li>Переведите плату в режим загрузчика: дважды быстро замкните RST на GND.
-          На компьютере появится USB-диск.</li>
-        <li>Скопируйте на этот диск файл <code>.uf2</code> — плата прошьётся и перезагрузится сама.</li>
-      </ol>
-      <p class="muted">Файл <code>.zip</code> подходит для <code>adafruit-nrfutil dfu serial --singlebank -b 115200 -p ПОРТ -pkg ФАЙЛ.zip</code>.</p>
+
+      <details class="more">
+        <summary>nRF Connect на iPhone или Android</summary>
+        <ol class="steps">
+          <li>Скачайте «DFU .zip с настройками» и установите приложение nRF Connect от Nordic Semiconductor.</li>
+          <li>Включите на дисплее режим обновления по Bluetooth (держите кнопку при включении).</li>
+          <li>В nRF Connect подключитесь к IMBA TV, нажмите DFU и выберите скачанный .zip.</li>
+        </ol>
+      </details>
+      <details class="more">
+        <summary>Файл .uf2 через USB-диск</summary>
+        <ol class="steps">
+          <li>Переведите плату в режим загрузчика: дважды быстро замкните RST на GND.
+            На компьютере появится USB-диск.</li>
+          <li>Скопируйте на этот диск файл <code>.uf2</code> — плата прошьётся и перезагрузится сама.</li>
+        </ol>
+      </details>
+      <details class="more">
+        <summary>adafruit-nrfutil</summary>
+        <p class="muted"><code>adafruit-nrfutil dfu serial --singlebank -b 115200 -p ПОРТ -pkg ФАЙЛ.zip</code></p>
+      </details>
     </section>
 
     <footer>

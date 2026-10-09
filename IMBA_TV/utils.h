@@ -13,6 +13,7 @@ bool isUsbConnected();
 void buttonInitSense();
 void buttonInitNoSense();
 bool buttonWaitPowerup();
+bool buttonPressed();
 enum button_event_t
 {
   BUTTON_NONE,

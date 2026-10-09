@@ -56,7 +56,7 @@ void buttonInitNoSense()
   pinMode(button_pin, INPUT_PULLUP);
 }
 
-static bool buttonState()
+bool buttonPressed()
 {
   return !digitalRead(button_pin);
 }
@@ -66,7 +66,7 @@ bool buttonWaitPowerup()
   uint16_t cnt = config().power_on_ms / button_period;
   while(cnt--)
   {
-    if(!buttonState()) return false;
+    if(!buttonPressed()) return false;
     delay(button_period);
   }
 
@@ -76,7 +76,7 @@ bool buttonWaitPowerup()
 
 button_event_t buttonPoll()
 {
-  bool state = buttonState();
+  bool state = buttonPressed();
   if(button_hold)
   {
     if(!state) button_hold = false;
@@ -110,5 +110,5 @@ button_event_t buttonPoll()
 
 void buttonWaitRelease()
 {
-  while(buttonState()) delay(button_period);
+  while(buttonPressed()) delay(button_period);
 }

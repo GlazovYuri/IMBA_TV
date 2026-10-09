@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues } from '../js/config.js';
-import { readZip, loadFirmware, makeUf2, withImageCrc, crc16, FirmwareError } from '../js/firmware.js';
+import { readZip, loadFirmware, makeUf2, makeDfuZip, withImageCrc, crc16, FirmwareError } from '../js/firmware.js';
 import { schema, fields, defaults, makeBlock, withBlock } from './config-block.mjs';
 
 const source = JSON.parse(readFileSync(new URL('../../IMBA_TV/config.json', import.meta.url), 'utf8'));
@@ -88,5 +88,24 @@ test('настроенная прошивка проходит проверку 
 
   const fw = await loadFirmware('settings.uf2', makeUf2(out).buffer);
   assert.deepEqual(fw.bin.subarray(0, out.length), out);
+  assert.deepEqual(readValues(fw.bin, findConfig(fw.bin)), values);
+});
+
+test('DFU .zip с настройками для nRF Connect', async () => {
+  const bin = withBlock(appBin, 2000);
+  const cfg = findConfig(bin);
+  const values = { ...defaultValues(cfg), intro: 0, ble_update: false };
+  const out = applyValues(bin, cfg, values);
+  const zip = makeDfuZip(out, withImageCrc(appDat, out));
+
+  const files = await readZip(zip.buffer);
+  assert.deepEqual([...files.keys()], ['manifest.json', 'application.dat', 'application.bin']);
+  const manifest = JSON.parse(new TextDecoder().decode(files.get('manifest.json'))).manifest;
+  assert.equal(manifest.dfu_version, 0.5);
+  assert.equal(manifest.application.init_packet_data.firmware_crc16, crc16(out));
+  assert.deepEqual(manifest.application.init_packet_data.softdevice_req, [0xfffe]);
+
+  const fw = await loadFirmware('settings.zip', zip.buffer);
+  assert.deepEqual(fw.bin, out);
   assert.deepEqual(readValues(fw.bin, findConfig(fw.bin)), values);
 });

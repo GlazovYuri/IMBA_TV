@@ -5,6 +5,7 @@
 #include "ble.h"
 #include "display.h"
 #include "animations.h"
+#include "update_mode.h"
 
 static const uint32_t update_period = 40; //ms
 
@@ -17,6 +18,7 @@ void setup()
     usbDetectEnable();
     batteryInit();
 
+    bool by_button = false;
     if(isUsbWakeup())
     {
         if(!isUsbConnected()) systemOff();
@@ -30,15 +32,24 @@ void setup()
         }
 
         if(!buttonWaitPowerup()) systemOff();
+        by_button = true;
     }
-
-    bleInit();
-    bleAdvertise();
 
     powerOn();
     delay(100);
     displayInit();
     displaySetBrightness(config().brightness);
+
+    // кнопку держат и после включения экрана - режим обновления по Bluetooth
+    if(by_button && updateModeRequested())
+    {
+        bleInit(true);
+        bleAdvertise(true);
+        updateModeRun();
+    }
+
+    bleInit();
+    bleAdvertise();
 
     displayPlayIntro(batteryGetCharge(), isUsbConnected(), bleGetEucData());
 }
