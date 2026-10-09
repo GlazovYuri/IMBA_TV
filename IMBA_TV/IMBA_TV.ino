@@ -4,7 +4,7 @@
 #include "ble.h"
 #include "display.h"
 
-static const uint8_t brightness = 150;
+static const uint8_t brightness = 255;
 static const uint32_t update_period = 40; //ms
 
 void setup()

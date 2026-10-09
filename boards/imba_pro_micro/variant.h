@@ -51,6 +51,7 @@ extern "C"
 #define PIN_LED              (17)
 
 #define LED_BUILTIN          PIN_LED
+#define LED_BLUE             PIN_LED
 
 /*
  * Analog pins

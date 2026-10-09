@@ -119,28 +119,28 @@ static void drawEucSpeed(int x, int y, uint16_t speed)
 {
   speed = constrain(speed, 0, 999);
 
-  oled.setCursorXY(x + 11, y);
-  oled.setScale(1);
-  oled.print("скорость");
-
   int digits = cntDigits(speed);
-  oled.setCursorXY(x + (3 - digits) * 12, y + 16);
+  oled.setCursorXY(x + (3 - digits) * 12, y);
   oled.setScale(4);
   oled.print(speed);
+
+  oled.setCursorXY(x + 11, y + 38);
+  oled.setScale(1);
+  oled.print("скорость");
 }
 
 static void drawEucPwm(int x, int y, uint8_t pwm)
 {
   pwm = pwm % 100;
 
-  oled.setCursorXY(x + 14, y);
-  oled.setScale(1);
-  oled.print("ШИМ");
-
   int digits = cntDigits(pwm);
-  oled.setCursorXY(x + (2 - digits) * 12, y + 16);
+  oled.setCursorXY(x + (2 - digits) * 12, y);
   oled.setScale(4);
   oled.print(pwm);
+
+  oled.setCursorXY(x + 14, y + 38);
+  oled.setScale(1);
+  oled.print("ШИМ");
 }
 
 void displayDrawIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
@@ -150,8 +150,8 @@ void displayDrawIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
   if(data.is_connected)
   {
     drawEucCharge(47, 1, data.charge);
-    drawEucSpeed(0, 16, data.speed);
-    drawEucPwm(80, 16, data.pwm);
+    drawEucSpeed(0, 18, data.speed);
+    drawEucPwm(80, 18, data.pwm);
   }
   else
   {
