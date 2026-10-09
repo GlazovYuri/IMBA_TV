@@ -16,3 +16,4 @@ void displayClear();
 // режим обновления по Bluetooth
 void displayDrawUpdateHold(uint8_t percent);
 void displayDrawUpdateMode(bool connected);
+void displayDrawUpdateLowBattery(uint8_t charge, uint8_t min_charge);

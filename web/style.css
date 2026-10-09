@@ -389,6 +389,9 @@ footer { text-align: center; font-size: 15px; margin-top: 24px; }
 .tabs [role="tab"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .tabs [role="tab"]:disabled { cursor: not-allowed; opacity: 0.6; }
 .hint { font-size: 14px; margin: -6px 0 16px; }
+.recovery { font-size: 15px; }
+.recovery p { margin: 8px 0; }
+.recovery .steps { margin: 8px 0; }
 #manual .more { margin-top: 10px; }
 #manual .more .steps { margin: 8px 0 0; }
 #manual .more p { margin: 8px 0 0; }

@@ -11,6 +11,11 @@ static const uint32_t hold_grace = 400; //ms
 static const uint32_t hold_time = 3000; //ms
 static const uint32_t idle_timeout = 10UL * 60 * 1000; //ms
 static const uint32_t update_period = 100; //ms
+// Загрузчик стирает старую прошивку в начале обновления. Если батарея сядет посреди
+// передачи, дисплей будет ждать новую прошивку и не включится, поэтому без USB
+// режим обновления включается только при достаточном заряде
+static const uint8_t min_charge = 30; //%
+static const uint32_t low_battery_show_time = 3000; //ms
 
 bool updateModeRequested()
 {
@@ -20,7 +25,16 @@ bool updateModeRequested()
   while(buttonPressed())
   {
     uint32_t t = millis() - start;
-    if(t >= hold_grace + hold_time) return true;
+    if(t >= hold_grace + hold_time)
+    {
+      uint8_t charge = batteryGetCharge();
+      if(charge >= min_charge || isUsbConnected()) return true;
+
+      // заряда мало: объясняем и включаемся как обычно
+      displayDrawUpdateLowBattery(charge, min_charge);
+      delay(low_battery_show_time);
+      return false;
+    }
     if(t >= hold_grace) displayDrawUpdateHold((t - hold_grace) * 100 / hold_time);
     delay(20);
   }

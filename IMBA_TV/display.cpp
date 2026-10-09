@@ -197,3 +197,27 @@ void displayDrawUpdateMode(bool connected)
   oled.print("Выкл: держать кнопку");
   oled.update();
 }
+
+// Режим обновления не включился: заряда мало для прошивки по Bluetooth
+void displayDrawUpdateLowBattery(uint8_t charge, uint8_t min_charge)
+{
+  char text[40];  // кириллица в UTF-8 — 2 байта на букву
+  oled.clear();
+  oled.textMode(BUF_ADD);
+  oled.setScale(2);
+  oled.setCursorXY(4, 0);
+  oled.print("Зарядите");
+  oled.setCursorXY(4, 17);
+  oled.print("дисплей");
+  oled.setScale(1);
+  oled.setCursorXY(4, 38);
+  oled.print("Для обновления по");
+  oled.setCursorXY(4, 47);
+  snprintf(text, sizeof(text), "Bluetooth нужно %u%%", min_charge);
+  oled.print(text);
+  oled.setCursorXY(4, 56);
+  snprintf(text, sizeof(text), "Сейчас: %u%%", charge);
+  oled.print(text);
+  oled.textMode(BUF_REPLACE);
+  oled.update();
+}

@@ -234,6 +234,8 @@ export class SerialDfu {
 
     this.log(`Старт DFU, размер приложения ${bin.length} байт`);
     await this.sendPacket(concat(u32(DFU_START_PACKET), u32(DFU_UPDATE_MODE_APP), u32(0), u32(0), u32(bin.length)));
+    // загрузчик начал стирать старую прошивку: при обрыве дальше дисплей будет ждать новую
+    this.started = true;
     await this.wait(eraseWaitTime(bin.length));
 
     this.log('Отправка init-пакета');
