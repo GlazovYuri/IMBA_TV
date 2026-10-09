@@ -1,0 +1,7 @@
+tools/explosion/src/
+tools/explosion/.venv/
+tools/explosion/out/
+tools/explosion/src_old/
+tools/explosion/host/harness
+tools/explosion/host/intro_harness
+tools/explosion/src_destroy/
