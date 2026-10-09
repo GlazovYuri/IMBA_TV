@@ -2,6 +2,7 @@
 #include "config.h"
 #include "GyverOLED.h"
 #include "logo.h"
+#include "qr.h"
 #include "screen_main.h"
 #include "screen_grid.h"
 #include "screen_info.h"
@@ -35,6 +36,11 @@ static const int mode_dot_size = 3;
 static const int mode_dot_pitch = 5;
 static bool mode_dots_visible = false;
 static uint32_t mode_dots_time = 0;
+
+// спиннер экрана обновления: 8 позиций по кругу радиусом 6 px, голова 3×3, за ней 2×2 и точка
+static const uint32_t spinner_step = 100; //ms
+static const int8_t spinner_dx[8] = {6, 4, 0, -4, -6, -4, 0, 4};
+static const int8_t spinner_dy[8] = {0, 4, 6, 4, 0, -4, -6, -4};
 
 GyverOLED<SSH1106_128x64> oled;
 
@@ -186,20 +192,63 @@ void displayDrawUpdateHold(uint8_t percent)
   oled.update();
 }
 
-// Экран режима обновления. Во время прошивки он остаётся на дисплее как есть
+static void drawSpinner(int cx, int cy)
+{
+  uint8_t head = (millis() / spinner_step) % 8;
+  for(uint8_t k = 0; k < 3; k++)
+  {
+    uint8_t i = (head + 8 - k) % 8;
+    int x = cx + spinner_dx[i];
+    int y = cy + spinner_dy[i];
+    if(k == 0) oled.rect(x - 1, y - 1, x + 1, y + 1, OLED_FILL);
+    else if(k == 1) oled.rect(x - 1, y - 1, x, y, OLED_FILL);
+    else oled.dot(x, y);
+  }
+}
+
+// Экран режима обновления: пока ждём, QR-код сайта, после подключения надпись об этом.
+// Сайт подключается, только когда нажали «Прошить», и сразу переводит плату в загрузчик.
+// Загрузчик дисплей не обновляет, и последний кадр остаётся на экране всю прошивку
 void displayDrawUpdateMode(bool connected)
 {
   oled.clear();
-  oled.setScale(2);
-  oled.setCursorXY(4, 0);
-  oled.print("Обновление");
+  // строки ближе 8 px: текст по умолчанию пишется целыми байтами и стёр бы соседнюю строку
+  oled.textMode(BUF_ADD);
   oled.setScale(1);
-  oled.setCursorXY(4, 18);
-  oled.print("по Bluetooth");
-  oled.setCursorXY(4, 36);
-  oled.print(connected ? "Телефон подключён" : "Ждём подключения");
-  oled.setCursorXY(4, 54);
-  oled.print("Выкл: держать кнопку");
+  if(connected)
+  {
+    oled.setScale(2);
+    oled.setCursorXY(4, 0);
+    oled.print("Обновление");
+    oled.setScale(1);
+    oled.setCursorXY(4, 18);
+    oled.print("по Bluetooth");
+    // центр пустого места справа от текста: x 75..127 (до края экрана), y 14..54
+    drawSpinner(101, 34);
+    oled.setCursorXY(4, 36);
+    oled.print("Устройство");
+    oled.setCursorXY(4, 45);
+    oled.print("подключено");
+    oled.setCursorXY(4, 54);
+    oled.print("Прогресс на сайте");
+  }
+  else
+  {
+    // справа от кода 62 px, это 10 символов в строке
+    oled.drawBitmap(0, 0, qr_bitmap, qr_size, qr_size);
+    oled.setCursorXY(66, 1);
+    oled.print("Обновление");
+    oled.setCursorXY(66, 10);
+    oled.print("Bluetooth");
+    drawSpinner(96, 27);
+    oled.setCursorXY(66, 40);
+    oled.print("Выкл:");
+    oled.setCursorXY(66, 48);
+    oled.print("держать");
+    oled.setCursorXY(66, 56);
+    oled.print("кнопку");
+  }
+  oled.textMode(BUF_REPLACE);
   oled.update();
 }
 

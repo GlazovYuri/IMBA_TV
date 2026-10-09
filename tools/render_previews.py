@@ -24,7 +24,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKETCH = os.path.join(ROOT, 'IMBA_TV')
 HARNESS = os.path.join(ROOT, 'tools', 'previews')
 OUT = os.path.join(ROOT, 'web', 'previews')
-SOURCES = ['animations', 'display', 'screen_main', 'screen_grid', 'screen_info', 'screen_text', 'config', 'logo']
+SOURCES = ['animations', 'display', 'screen_main', 'screen_grid', 'screen_info', 'screen_text', 'config', 'logo', 'qr']
 
 W, H = 128, 64
 FRAME_BYTES = W * H // 8
