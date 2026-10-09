@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IMBA TV — прошивка</title>
+  <meta name="description" content="Обновление прошивки дисплея IMBA TV прямо из браузера">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='18' rx='4' fill='%230b7a75'/%3E%3Crect x='6' y='10' width='20' height='10' rx='1.5' fill='%23e3f3f2'/%3E%3Crect x='11' y='26' width='10' height='2.5' rx='1.25' fill='%230b7a75'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="6" width="28" height="18" rx="4" class="logo-body"/>
+        <rect x="6" y="10" width="20" height="10" rx="1.5" class="logo-screen"/>
+        <rect x="11" y="26" width="10" height="2.5" rx="1.25" class="logo-body"/>
+      </svg>
+      <div>
+        <h1>IMBA TV</h1>
+        <p class="subtitle">Обновление прошивки дисплея прямо из браузера</p>
+      </div>
+    </header>
+
+    <div id="unsupported" class="notice notice-warn" hidden>
+      Этот браузер не умеет работать с USB-портами. Откройте страницу в Chrome, Edge,
+      Яндекс Браузере или Opera на компьютере — или скачайте UF2-файл и прошейте плату вручную
+      (см. <a href="#manual">ниже</a>).
+    </div>
+
+    <section class="card" aria-labelledby="step1-title">
+      <h2 id="step1-title"><span class="step">1</span>Выберите прошивку</h2>
+
+      <div id="versions" class="options" role="radiogroup" aria-labelledby="step1-title">
+        <p class="muted" id="versions-loading">Загружаю список версий…</p>
+      </div>
+      <button type="button" id="show-all" class="link-button" hidden></button>
+
+      <label class="option" id="own-option">
+        <input type="radio" name="firmware" value="own">
+        <span class="option-body">
+          <span class="option-title">Свой файл</span>
+          <span class="option-meta">DFU-пакет .zip из Arduino IDE, .hex или .uf2</span>
+        </span>
+      </label>
+      <div id="dropzone" class="dropzone" hidden>
+        <input type="file" id="file-input" accept=".zip,.hex,.uf2" hidden>
+        <p>Перетащите файл сюда или <button type="button" id="file-pick" class="link-button">выберите на компьютере</button></p>
+        <p id="file-name" class="file-name" hidden></p>
+      </div>
+
+      <div id="details" class="details" hidden>
+        <p id="fw-check" class="fw-check"></p>
+        <div id="notes-box" hidden>
+          <h3 id="notes-title"></h3>
+          <div id="notes" class="notes"></div>
+        </div>
+        <p id="release-link" hidden><a href="#" target="_blank" rel="noopener">Страница релиза на GitHub</a></p>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="step2-title">
+      <h2 id="step2-title"><span class="step">2</span>Прошейте плату</h2>
+      <ol class="steps">
+        <li>Подключите IMBA TV к компьютеру USB-кабелем с передачей данных — дисплей включится сам.</li>
+        <li>Нажмите «Прошить» и выберите в списке устройство <b>IMBA TV</b>.</li>
+        <li>Плата перезагрузится в режим загрузчика. Если браузер попросит, выберите новое устройство ещё раз.</li>
+      </ol>
+
+      <div class="actions">
+        <button type="button" id="flash" class="button button-primary" disabled>Прошить</button>
+        <button type="button" id="pick-bootloader" class="button button-primary" hidden>Выбрать порт загрузчика</button>
+        <button type="button" id="cancel" class="button" hidden>Отмена</button>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+      <div id="progress-box" class="progress" hidden>
+        <progress id="progress" max="100" value="0"></progress>
+        <span id="progress-text">0%</span>
+      </div>
+
+      <details class="more">
+        <summary>Журнал</summary>
+        <pre id="log" class="log"></pre>
+      </details>
+      <details class="more">
+        <summary>Дополнительно</summary>
+        <label class="checkbox">
+          <input type="checkbox" id="all-ports">
+          Показывать все последовательные порты, а не только платы Adafruit nRF52
+        </label>
+      </details>
+    </section>
+
+    <section class="card" id="manual" aria-labelledby="manual-title">
+      <h2 id="manual-title">Прошивка вручную</h2>
+      <p>Если браузер не поддерживает Web Serial, скачайте файл выбранной версии:</p>
+      <div id="downloads" class="downloads"><span class="muted">Выберите версию выше</span></div>
+      <ol class="steps">
+        <li>Переведите плату в режим загрузчика: дважды быстро замкните RST на GND.
+          На компьютере появится USB-диск.</li>
+        <li>Скопируйте на этот диск файл <code>.uf2</code> — плата прошьётся и перезагрузится сама.</li>
+      </ol>
+      <p class="muted">Файл <code>.zip</code> подходит для <code>adafruit-nrfutil dfu serial --singlebank -b 115200 -p ПОРТ -pkg ФАЙЛ.zip</code>.</p>
+    </section>
+
+    <footer>
+      <a id="repo-link" href="https://github.com/glazovyuri/imba_tv" target="_blank" rel="noopener">Исходный код и все релизы на GitHub</a>
+    </footer>
+  </main>
+</body>
+</html>

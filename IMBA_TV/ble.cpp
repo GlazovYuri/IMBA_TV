@@ -1,4 +1,5 @@
 #include "ble.h"
+#include "version.h"
 #include <bluefruit.h>
 
 const int8_t tx_power = 8; //dBm
@@ -137,7 +138,7 @@ void bleInit()
   bledis.setManufacturer("IMBA");
   bledis.setModel("IMBA TV");
   bledis.setHardwareRev("0.2");
-  bledis.setFirmwareRev("0.4");
+  bledis.setFirmwareRev(FW_VERSION);
   bledis.begin();
 
   euc_service.begin();

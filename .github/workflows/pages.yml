@@ -1,0 +1,62 @@
+# Сайт для прошивки через браузер (GitHub Pages): страница из web/ и прошивки всех релизов.
+# Запускается после каждого релиза из firmware.yml, при изменении сайта и вручную.
+name: Pages
+
+on:
+  push:
+    paths:
+      - 'web/**'
+      - '.github/scripts/build_site.py'
+      - '.github/workflows/pages.yml'
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test web flasher
+        run: node --test 'web/test/*.test.mjs'
+
+  build:
+    needs: test
+    # Публикуем только с основной ветки: на остальных достаточно тестов
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Collect site and firmware
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/build_site.py _site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
