@@ -32,7 +32,7 @@ void configLoad()
 
   configSanitize(cfg);
   // хотя бы один экран должен остаться
-  if(!cfg.screen_charge && !cfg.screen_voltage && !cfg.screen_grid) cfg.screen_charge = 1;
+  if(!cfg.screen_charge && !cfg.screen_voltage && !cfg.screen_grid && !cfg.screen_info) cfg.screen_charge = 1;
 }
 
 const fw_config_t& config()

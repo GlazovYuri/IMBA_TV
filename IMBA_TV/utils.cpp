@@ -13,6 +13,19 @@ void softDeviceInit()
   Bluefruit.begin();
 }
 
+const char* bootloaderVersionText()
+{
+  // ядро читает версию, которую загрузчик оставляет в регистре, как 0x00MMmmpp
+  static char text[12] = "";
+  uint32_t v = bootloaderVersion;
+  if(!text[0] && v != 0 && v <= 0xFFFFFF)
+  {
+    snprintf(text, sizeof(text), "%lu.%lu.%lu",
+             (unsigned long)(v >> 16), (unsigned long)((v >> 8) & 0xFF), (unsigned long)(v & 0xFF));
+  }
+  return text;
+}
+
 void powerOn()
 {
   pinMode(PIN_PWREN, OUTPUT);

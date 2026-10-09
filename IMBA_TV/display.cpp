@@ -4,6 +4,7 @@
 #include "logo.h"
 #include "screen_main.h"
 #include "screen_grid.h"
+#include "screen_info.h"
 
 static const uint32_t blink_period_low = 1000; //ms
 static const uint32_t blink_period_high = 300; //ms
@@ -16,7 +17,8 @@ enum
 {
   MODE_CHARGE,   // основной экран, заряд колеса в процентах (screen_main)
   MODE_VOLTAGE,  // основной экран, напряжение колеса (screen_main)
-  MODE_GRID,     // сетка параметров и связь (screen_grid)
+  MODE_GRID,     // сетка параметров (screen_grid)
+  MODE_INFO,     // связь с телефоном и версии прошивки и загрузчика (screen_info)
   display_modes
 };
 
@@ -43,6 +45,7 @@ void displayInit()
   if(cfg.screen_charge) modes[modes_cnt++] = MODE_CHARGE;
   if(cfg.screen_voltage) modes[modes_cnt++] = MODE_VOLTAGE;
   if(cfg.screen_grid) modes[modes_cnt++] = MODE_GRID;
+  if(cfg.screen_info) modes[modes_cnt++] = MODE_INFO;
   display_mode = 0;
 
   oled.init();
@@ -108,7 +111,9 @@ void displayRenderIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
   oled.clear();
 
   uint8_t mode = modes_cnt ? modes[display_mode] : MODE_CHARGE;
-  if(!data.is_connected) screenNoLinkDraw(dev_charge, is_charging);
+  // версии полезны и без телефона, поэтому экран связи и версий показывается всегда
+  if(mode == MODE_INFO) screenInfoDraw(data);
+  else if(!data.is_connected) screenNoLinkDraw(dev_charge, is_charging);
   else if(mode == MODE_CHARGE) screenMainDraw(dev_charge, is_charging, data, false);
   else if(mode == MODE_VOLTAGE) screenMainDraw(dev_charge, is_charging, data, true);
   else screenGridDraw(data);

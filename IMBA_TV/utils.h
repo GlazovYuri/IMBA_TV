@@ -2,6 +2,9 @@
 
 void softDeviceInit();
 
+// Версия загрузчика строкой, например "0.11.0", или "", если он её не сообщает
+const char* bootloaderVersionText();
+
 void powerOn();
 void powerOff();
 void systemOff();
