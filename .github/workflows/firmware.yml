@@ -30,6 +30,7 @@ env:
   FQBN: adafruit:nrf52:imba_pro_micro
   # Версия первого релиза, пока в репозитории нет ни одного тега vX.Y.Z
   INITIAL_VERSION: 0.5.0
+  GYVEROLED_VERSION: 1.6.4
   ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS: https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
 
 jobs:
@@ -92,7 +93,7 @@ jobs:
         run: |
           arduino-cli core update-index
           arduino-cli core install "adafruit:nrf52@$CORE_VERSION"
-          arduino-cli lib install GyverOLED
+          arduino-cli lib install "GyverOLED@$GYVEROLED_VERSION"
           arduino-cli lib list
 
           # Плата IMBA nRF52840 ProMicro ставится поверх ядра, как описано в README
@@ -113,6 +114,14 @@ jobs:
           cp build/IMBA_TV.ino.zip "dist/IMBA_TV-$VERSION.zip"
           python3 .github/scripts/hex2uf2.py "dist/IMBA_TV-$VERSION.hex" "dist/IMBA_TV-$VERSION.uf2"
           ls -l dist
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Те же файлы потом прошиваются через сайт — проверяем их его же кодом
+      - name: Check firmware files with web flasher
+        run: node web/test/check-build.mjs dist
 
       - uses: actions/upload-artifact@v4
         with:
