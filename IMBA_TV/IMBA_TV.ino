@@ -3,6 +3,7 @@
 #include "battery.h"
 #include "ble.h"
 #include "display.h"
+#include "animations.h"
 
 static const uint8_t brightness = 255;
 static const uint32_t update_period = 40; //ms
@@ -38,14 +39,14 @@ void setup()
     displayInit();
     displaySetBrightness(brightness);
 
-    displayDrawLogo();
-    delay(1000);
+    displayPlayIntro(batteryGetCharge(), isUsbConnected(), bleGetEucData());
 }
 
 void loop()
 {
     if(buttonIsLongPress())
     {
+        displayPowerOffAnimation(batteryGetCharge(), isUsbConnected(), bleGetEucData());
         displayOff();
         powerOff();
         buttonWaitRelease();
@@ -58,6 +59,7 @@ void loop()
     if(batteryIsChargeCritical() && !usb_connected)
     {
         buttonInitNoSense();
+        displayPowerOffAnimation(batteryGetCharge(), usb_connected, bleGetEucData());
         displayOff();
         powerOff();
         systemOff();

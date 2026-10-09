@@ -6,7 +6,7 @@ static const uint32_t blink_period_low = 1000; //ms
 static const uint32_t blink_period_high = 300; //ms
 static const uint32_t blink_length = 50; //ms
 
-static GyverOLED<SSH1106_128x64> oled;
+GyverOLED<SSH1106_128x64> oled;
 
 void displayInit()
 {
@@ -143,7 +143,7 @@ static void drawEucPwm(int x, int y, uint8_t pwm)
   oled.print("ШИМ");
 }
 
-void displayDrawIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
+void displayRenderIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
 {
   oled.clear();
   drawDevCharge(0, 1, dev_charge, is_charging);
@@ -159,6 +159,11 @@ void displayDrawIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
     oled.setScale(2);
     oled.print("нет связи");
   }
+}
+
+void displayDrawIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
+{
+  displayRenderIface(dev_charge, is_charging, data);
   oled.update();
 }
 
