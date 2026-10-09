@@ -147,11 +147,11 @@ function select(selection) {
   $('dropzone').hidden = !own;
   if (!own) history.replaceState(null, '', `#${encodeURIComponent(selection.version.tag)}`);
 
+  state.firmwareFailed = false;
+  state.fw = null;
   renderDetails();
   renderDownloads();
 
-  state.firmwareFailed = false;
-  state.fw = null;
   if (own && !selection.file) {
     state.firmware = null;
   } else {
@@ -252,6 +252,7 @@ function renderDownloads() {
 }
 
 function downloadConfiguredUf2() {
+  if (!state.fw?.config) return;
   let image;
   try {
     image = buildImage(state.fw);
