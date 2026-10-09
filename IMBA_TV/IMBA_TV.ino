@@ -40,8 +40,10 @@ void setup()
     displayInit();
     displaySetBrightness(config().brightness);
 
-    // кнопку держат и после включения экрана - режим обновления по Bluetooth
-    if(by_button && updateModeRequested())
+    // логотип сразу после включения экрана, иначе до первой картинки виден мусор из памяти дисплея.
+    // Режим обновления по Bluetooth: кнопку не отпустили, пока логотип висел, и держат дальше
+    bool held = displayIntroBegin(by_button, batteryGetCharge(), isUsbConnected(), bleGetEucData());
+    if(held && updateModeRequested())
     {
         bleInit(true);
         bleAdvertise(true);
@@ -51,7 +53,7 @@ void setup()
     bleInit();
     bleAdvertise();
 
-    displayPlayIntro(batteryGetCharge(), isUsbConnected(), bleGetEucData());
+    displayIntroFinish(batteryGetCharge(), isUsbConnected(), bleGetEucData());
 }
 
 void loop()

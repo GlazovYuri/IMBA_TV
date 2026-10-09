@@ -6,8 +6,7 @@
 #include "display.h"
 #include <Arduino.h>
 
-// кнопку часто отпускают чуть позже, чем загорается экран: подсказку показываем не сразу
-static const uint32_t hold_grace = 400; //ms
+// вызывается, когда кнопку не отпускали всю секунду показа логотипа, поэтому полоса сразу
 static const uint32_t hold_time = 3000; //ms
 static const uint32_t idle_timeout = 10UL * 60 * 1000; //ms
 static const uint32_t update_period = 100; //ms
@@ -25,7 +24,7 @@ bool updateModeRequested()
   while(buttonPressed())
   {
     uint32_t t = millis() - start;
-    if(t >= hold_grace + hold_time)
+    if(t >= hold_time)
     {
       uint8_t charge = batteryGetCharge();
       if(charge >= min_charge || isUsbConnected()) return true;
@@ -35,7 +34,7 @@ bool updateModeRequested()
       delay(low_battery_show_time);
       return false;
     }
-    if(t >= hold_grace) displayDrawUpdateHold((t - hold_grace) * 100 / hold_time);
+    displayDrawUpdateHold(t * 100 / hold_time);
     delay(20);
   }
   return false;
