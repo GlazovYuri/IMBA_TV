@@ -44,7 +44,9 @@ void setup()
 
 void loop()
 {
-    if(buttonIsLongPress())
+    button_event_t button = buttonPoll();
+    if(button == BUTTON_SHORT) displayNextMode();
+    if(button == BUTTON_LONG)
     {
         displayPowerOffAnimation(batteryGetCharge(), isUsbConnected(), bleGetEucData());
         displayOff();

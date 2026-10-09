@@ -75,30 +75,38 @@ bool buttonWaitPowerup()
   return true;
 }
 
-bool buttonIsLongPress()
+button_event_t buttonPoll()
 {
   bool state = buttonState();
   if(button_hold)
   {
     if(!state) button_hold = false;
-    return false;
+    return BUTTON_NONE;
   }
 
-  static uint32_t unpressed_time = 0;
+  static bool pressed = false;
+  static uint32_t press_time = 0;
   uint32_t time = millis();
+
   if(state)
   {
-    if(time - unpressed_time > off_delay)
+    if(!pressed)
     {
-      return true;
+      pressed = true;
+      press_time = time;
+    }
+    else if(time - press_time > off_delay)
+    {
+      return BUTTON_LONG;
     }
   }
-  else
+  else if(pressed)
   {
-    unpressed_time = time;
+    pressed = false;
+    if(time - press_time <= off_delay) return BUTTON_SHORT;
   }
 
-  return false;
+  return BUTTON_NONE;
 }
 
 void buttonWaitRelease()

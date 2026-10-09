@@ -1,10 +1,32 @@
 #include "display.h"
 #include "GyverOLED.h"
 #include "logo.h"
+#include "screen_main.h"
+#include "screen_grid.h"
 
 static const uint32_t blink_period_low = 1000; //ms
 static const uint32_t blink_period_high = 300; //ms
 static const uint32_t blink_length = 50; //ms
+
+static const int scr_width = 128;
+
+// режимы экрана, переключаются коротким нажатием кнопки
+enum
+{
+  MODE_CHARGE,   // основной экран, заряд колеса в процентах (screen_main)
+  MODE_VOLTAGE,  // основной экран, напряжение колеса (screen_main)
+  MODE_GRID,     // сетка параметров и связь (screen_grid)
+  display_modes
+};
+
+static uint8_t display_mode = MODE_CHARGE;
+
+// индикатор страниц: точки в правом нижнем углу, видны после нажатия кнопки
+static const uint32_t mode_dots_show_time = 1500; //ms
+static const int mode_dot_size = 3;
+static const int mode_dot_pitch = 5;
+static bool mode_dots_visible = false;
+static uint32_t mode_dots_time = 0;
 
 GyverOLED<SSH1106_128x64> oled;
 
@@ -33,132 +55,44 @@ void displayDrawLogo()
   oled.update();
 }
 
-static const uint8_t charging_bitmap[] = {
-  0xff, 0x81, 0xb1, 0x99, 0x8d, 0x9d, 0xb9, 0xb1, 0x99, 0x8d, 0x81, 0xff, 0x3c, 0x3c
-};
-
-static void drawDevCharge(int x, int y, uint8_t charge, bool is_charging)
+void displayNextMode()
 {
-  charge = constrain(charge, 0, 100);
-
-  if(is_charging)
-  {
-    oled.drawBitmap(x, y, charging_bitmap, 14, 8);
-  }
-  else
-  {
-    oled.setCursorXY(x, y);
-
-    oled.drawByte(0xFF);
-
-    uint8_t level = charge / 10;
-    for(uint8_t i = 0; i < 10; i++)
-    {
-      if(i < level) oled.drawByte(0xFF);
-      else oled.drawByte(0x81);
-    }
-
-    oled.drawByte(0xFF);
-    oled.drawByte(0x3C);
-    oled.drawByte(0x3C);
-  }
-
-  oled.setCursorXY(x + 17, y);
-  oled.setScale(1);
-  oled.print(charge);
-  oled.print("%");
+  display_mode = (display_mode + 1) % display_modes;
+  mode_dots_visible = true;
+  mode_dots_time = millis();
 }
 
-static void drawEucCharge(int x, int y, uint8_t charge)
+// точки в правом нижнем углу: выбранная страница залита, остальные контуром, под точками чёрная подложка
+static void drawModeDots()
 {
-  charge = constrain(charge, 0, 100);
-
-  oled.setCursorXY(x, y);
-
-  oled.drawByte(0xFF);
-
-  uint8_t level = charge / 4;
-  for(uint8_t i = 0; i < 25; i++)
+  if(!mode_dots_visible) return;
+  if(millis() - mode_dots_time > mode_dots_show_time)
   {
-    if(i < level)
-    {
-      oled.drawByte(0x81);
-      oled.drawByte(0xFF);
-    }
-    else
-    {
-      oled.drawByte(0x81);
-      oled.drawByte(0x81);
-    }
+    mode_dots_visible = false;
+    return;
   }
 
-  oled.drawByte(0xFF);
-  oled.drawByte(0x3C);
-  oled.drawByte(0x3C);
-
-  oled.setCursorXY(x + 57, y);
-  oled.setScale(1);
-  oled.print(charge);
-  oled.print("%");
-}
-
-static int cntDigits(uint16_t val)
-{
-  if(val == 0) return 1;
-
-  int cnt = 0;
-  while(val != 0)
+  int width = display_modes * mode_dot_pitch - (mode_dot_pitch - mode_dot_size);
+  int x0 = scr_width - width;
+  int y = 64 - mode_dot_size;
+  oled.rect(x0 - 1, y - 1, scr_width - 1, 63, OLED_CLEAR);
+  for(int i = 0; i < display_modes; i++)
   {
-    val /= 10;
-    ++cnt;
+    int x = x0 + i * mode_dot_pitch;
+    oled.rect(x, y, x + mode_dot_size - 1, 63, (i == display_mode) ? OLED_FILL : OLED_STROKE);
   }
-  return cnt;
-}
-
-static void drawEucSpeed(int x, int y, uint16_t speed)
-{
-  speed = constrain(speed, 0, 999);
-
-  int digits = cntDigits(speed);
-  oled.setCursorXY(x + (3 - digits) * 12, y);
-  oled.setScale(4);
-  oled.print(speed);
-
-  oled.setCursorXY(x + 11, y + 38);
-  oled.setScale(1);
-  oled.print("скорость");
-}
-
-static void drawEucPwm(int x, int y, uint8_t pwm)
-{
-  pwm = pwm % 100;
-
-  int digits = cntDigits(pwm);
-  oled.setCursorXY(x + (2 - digits) * 12, y);
-  oled.setScale(4);
-  oled.print(pwm);
-
-  oled.setCursorXY(x + 14, y + 38);
-  oled.setScale(1);
-  oled.print("ШИМ");
 }
 
 void displayRenderIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
 {
   oled.clear();
-  drawDevCharge(0, 1, dev_charge, is_charging);
-  if(data.is_connected)
-  {
-    drawEucCharge(47, 1, data.charge);
-    drawEucSpeed(0, 18, data.speed);
-    drawEucPwm(80, 18, data.pwm);
-  }
-  else
-  {
-    oled.setCursor(10, 3);
-    oled.setScale(2);
-    oled.print("нет связи");
-  }
+
+  if(!data.is_connected) screenNoLinkDraw(dev_charge, is_charging);
+  else if(display_mode == MODE_CHARGE) screenMainDraw(dev_charge, is_charging, data, false);
+  else if(display_mode == MODE_VOLTAGE) screenMainDraw(dev_charge, is_charging, data, true);
+  else screenGridDraw(data);
+
+  drawModeDots();
 }
 
 void displayDrawIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
