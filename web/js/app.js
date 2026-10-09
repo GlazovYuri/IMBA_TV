@@ -1,4 +1,4 @@
-import { loadFirmware, FirmwareError, withImageCrc, makeUf2, makeDfuZip } from './firmware.js';
+import { loadFirmware, FirmwareError, withImageCrc, makeUf2 } from './firmware.js';
 import { SerialDfu, DfuError, touch1200, activateWaitTime } from './dfu.js';
 import { BleDfu, BleDfuError, requestDfuDevice } from './ble-dfu.js';
 import { findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues } from './config.js';
@@ -234,14 +234,12 @@ function renderDownloads() {
   const release = state.selected?.kind === 'release' ? state.selected.version : null;
 
   if (state.fw?.config) {
-    for (const [kind, title] of [['uf2', 'UF2'], ['zip', 'DFU .zip']]) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'download';
-      button.textContent = `${title} с настройками${release ? ` · ${release.tag}` : ''}`;
-      button.addEventListener('click', () => downloadConfigured(kind));
-      box.append(button);
-    }
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'download';
+    button.textContent = `UF2 с настройками${release ? ` · ${release.tag}` : ''}`;
+    button.addEventListener('click', downloadConfiguredUf2);
+    box.append(button);
   }
   if (!release) {
     if (state.fw?.config) return;
@@ -261,8 +259,8 @@ function renderDownloads() {
   }
 }
 
-// Файл прошивки с выбранными настройками: .uf2 для USB-диска или DFU .zip для nRF Connect
-function downloadConfigured(kind) {
+// .uf2 с выбранными настройками для USB-диска загрузчика
+function downloadConfiguredUf2() {
   if (!state.fw?.config) return;
   let image;
   try {
@@ -272,11 +270,10 @@ function downloadConfigured(kind) {
     return;
   }
   const release = state.selected?.kind === 'release' ? state.selected.version.tag : 'custom';
-  const data = kind === 'zip' ? makeDfuZip(image.bin, image.dat) : makeUf2(image.bin);
-  const url = URL.createObjectURL(new Blob([data], { type: kind === 'zip' ? 'application/zip' : 'application/octet-stream' }));
+  const url = URL.createObjectURL(new Blob([makeUf2(image.bin)], { type: 'application/octet-stream' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `IMBA_TV-${release}-settings.${kind}`;
+  a.download = `IMBA_TV-${release}-settings.uf2`;
   document.body.append(a);
   a.click();
   a.remove();
@@ -754,8 +751,7 @@ function initMethods() {
     note.hidden = false;
     if (isIOS) {
       note.append('На iPhone Safari и другие браузеры не умеют работать с Bluetooth. Откройте эту страницу в бесплатном браузере ',
-        link('Bluefy', 'https://apps.apple.com/app/id1492822055'),
-        ' или прошейте дисплей приложением nRF Connect (', link('файл и инструкция ниже', '#manual'), ').');
+        link('Bluefy', 'https://apps.apple.com/app/id1492822055'), ' — в нём прошивка по Bluetooth работает.');
     } else {
       note.textContent = 'Этот браузер не умеет работать с Bluetooth. Нужен Chrome (на компьютере или Android), Edge или Яндекс Браузер.';
     }
@@ -771,9 +767,8 @@ function initMethods() {
     const note = $('unsupported');
     note.hidden = false;
     if (isIOS) {
-      note.append('На iPhone прошить дисплей можно по Bluetooth: откройте эту страницу в браузере ',
-        link('Bluefy', 'https://apps.apple.com/app/id1492822055'),
-        ' или используйте приложение nRF Connect (', link('см. ниже', '#manual'), ').');
+      note.append('На iPhone прошить дисплей можно по Bluetooth: откройте эту страницу в бесплатном браузере ',
+        link('Bluefy', 'https://apps.apple.com/app/id1492822055'), '.');
     } else {
       note.append('Этот браузер не умеет работать ни с USB, ни с Bluetooth. Откройте страницу в Chrome, Edge или Яндекс Браузере — или ',
         link('скачайте файл', '#manual'), ' и прошейте вручную.');

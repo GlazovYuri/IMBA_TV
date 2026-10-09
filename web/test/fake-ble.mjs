@@ -56,14 +56,17 @@ class FakeCharacteristic extends EventTarget {
 
   async writeValueWithoutResponse(bytes) {
     if (!this.board.connected) throw domError('NetworkError', 'GATT Server is disconnected');
+    if (this.board.packetDelay) await new Promise((r) => later(r, this.board.packetDelay));
     this.board.onPacket(new Uint8Array(bytes.buffer ?? bytes, bytes.byteOffset ?? 0, bytes.byteLength).slice());
   }
 }
 
 export class FakeBleBoard {
   // mode: 'app' — прошивка в режиме обновления, 'normal' — прошивка без сервиса DFU, 'boot' — загрузчик
-  constructor({ mode = 'app', reconnectFailures = 0, dropPacket = -1, corruptPacket = -1 } = {}) {
+  // packetDelay — задержка каждого пакета данных, мс: чтобы увидеть прогресс на странице
+  constructor({ mode = 'app', reconnectFailures = 0, dropPacket = -1, corruptPacket = -1, packetDelay = 0 } = {}) {
     this.mode = mode;
+    this.packetDelay = packetDelay;
     this.reconnectFailures = reconnectFailures;
     this.dropPacket = dropPacket;
     this.corruptPacket = corruptPacket;

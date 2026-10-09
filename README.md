@@ -23,7 +23,7 @@
 
 Где работает:
 * Android и компьютер — Chrome, Edge, Яндекс Браузер
-* iPhone — браузер [Bluefy](https://apps.apple.com/app/id1492822055) (Safari не поддерживает Bluetooth) или приложение nRF Connect с файлом «DFU .zip с настройками» с сайта
+* iPhone — браузер [Bluefy](https://apps.apple.com/app/id1492822055) (Safari и другие браузеры на iPhone не поддерживают Bluetooth)
 
 Режим обновления можно запретить в настройках (группа «Обновление по Bluetooth»).
 

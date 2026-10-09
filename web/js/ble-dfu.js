@@ -1,5 +1,5 @@
-// Обновление по Bluetooth через Web Bluetooth: legacy DFU Nordic SDK 11,
-// который поддерживает загрузчик Adafruit nRF52 (так же работают nRF Connect и Bluefruit Connect).
+// Обновление по Bluetooth через Web Bluetooth: протокол legacy DFU (Nordic SDK 11),
+// который поддерживает загрузчик Adafruit nRF52.
 //
 // 1. В прошивке (режим обновления) работает сервис DFU Adafruit (BLEDfu) с версией 1.
 //    Команда START перезагружает плату в загрузчик, тот ждёт переподключения этого же телефона.

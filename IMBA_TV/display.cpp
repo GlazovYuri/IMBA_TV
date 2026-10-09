@@ -162,6 +162,8 @@ void displayClear()
 void displayDrawUpdateHold(uint8_t percent)
 {
   oled.clear();
+  // строки ближе 8 px: текст по умолчанию пишется целыми байтами и стёр бы соседнюю строку
+  oled.textMode(BUF_ADD);
   oled.setScale(1);
   oled.setCursorXY(4, 4);
   oled.print("Держите кнопку,");
@@ -171,6 +173,7 @@ void displayDrawUpdateHold(uint8_t percent)
   oled.print("обновление по");
   oled.setCursorXY(4, 34);
   oled.print("Bluetooth");
+  oled.textMode(BUF_REPLACE);
 
   int fill = (scr_width - 10) * constrain(percent, 0, 100) / 100;
   oled.rect(4, 48, scr_width - 5, 57, OLED_STROKE);
