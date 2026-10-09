@@ -6,7 +6,7 @@
 * Предупреждения по превышению ШИМ
 
 # Прошивка через браузер
-Самый простой способ обновить дисплей — сайт [glazovyuri.github.io/imba_tv](https://glazovyuri.github.io/imba_tv/):
+Самый простой способ обновить дисплей — сайт [glazovyuri.github.io/IMBA_TV](https://glazovyuri.github.io/IMBA_TV/):
 1. Откройте сайт в Chrome, Edge, Яндекс Браузере или Opera на компьютере (нужна поддержка Web Serial)
 2. Выберите версию прошивки или загрузите свой файл (.zip из Arduino IDE, .hex или .uf2)
 3. Подключите устройство по USB, нажмите «Прошить» и выберите порт IMBA TV

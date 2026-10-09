@@ -270,11 +270,17 @@ function detectFormat(name, bytes) {
 export async function loadFirmware(name, buffer) {
   const bytes = new Uint8Array(buffer);
   let fw;
-  switch (detectFormat(name, bytes)) {
-    case 'zip': fw = { ...(await parseDfuZip(buffer)), format: 'zip' }; break;
-    case 'uf2': fw = fromChunks(parseUf2(buffer), 'uf2'); break;
-    case 'hex': fw = fromChunks(parseIntelHex(new TextDecoder().decode(bytes)), 'hex'); break;
-    default: throw new FirmwareError('Поддерживаются файлы .zip (DFU-пакет), .hex и .uf2');
+  try {
+    switch (detectFormat(name, bytes)) {
+      case 'zip': fw = { ...(await parseDfuZip(buffer)), format: 'zip' }; break;
+      case 'uf2': fw = fromChunks(parseUf2(buffer), 'uf2'); break;
+      case 'hex': fw = fromChunks(parseIntelHex(new TextDecoder().decode(bytes)), 'hex'); break;
+      default: throw new FirmwareError('Поддерживаются файлы .zip (DFU-пакет), .hex и .uf2');
+    }
+  } catch (e) {
+    if (e instanceof FirmwareError) throw e;
+    // обрезанный архив, битые сжатые данные и т. п.
+    throw new FirmwareError(`Файл повреждён или имеет неизвестный формат (${e.message})`);
   }
   validate(fw);
   return fw;

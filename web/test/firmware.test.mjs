@@ -57,6 +57,14 @@ test('HEX с другим начальным адресом отклоняетс
   await assert.rejects(loadFirmware('app.hex', new TextEncoder().encode(hex).buffer), /0x36000/);
 });
 
+test('обрезанный и испорченный zip дают понятную ошибку', async () => {
+  const zip = new Uint8Array(fixture('app-deflate.zip'));
+  await assert.rejects(loadFirmware('app.zip', zip.slice(0, zip.length - 30).buffer), FirmwareError);
+  const broken = zip.slice();
+  broken.fill(0x55, 60, 400); // сжатые данные manifest.json и app.bin
+  await assert.rejects(loadFirmware('app.zip', broken.buffer), FirmwareError);
+});
+
 test('посторонние файлы отклоняются', async () => {
   await assert.rejects(loadFirmware('photo.jpg', new Uint8Array([0xff, 0xd8, 0xff]).buffer), FirmwareError);
   await assert.rejects(loadFirmware('notes.hex', new TextEncoder().encode(':zz\n').buffer), /HEX/);
