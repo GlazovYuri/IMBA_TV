@@ -587,22 +587,40 @@ function obtainBootloaderPort(oldPort) {
   });
 }
 
+const ERASED_NOTE = 'Старая прошивка уже стёрта, поэтому дисплей не будет включаться, пока его не прошить заново. ' +
+  'Это не опасно: загрузчик цел и ждёт новую прошивку — см. «Дисплей не включается после неудачной прошивки» ниже.';
+
+function showRecovery() {
+  $('recovery').open = true;
+}
+
+// Ошибка прошивки по Bluetooth: что делать, зависит от того, успел ли загрузчик стереть старую прошивку
+function explainBle(e, stage) {
+  if (e instanceof FirmwareError) return e.message;
+  if (e.code === 'no-dfu') {
+    return 'На дисплее не включён режим обновления по Bluetooth. Выключите дисплей и включите его, удерживая кнопку ещё 3 секунды, ' +
+      'пока не появится «Обновление по Bluetooth». Если появилось «Зарядите дисплей» — зарядите его до 30%. ' +
+      'Если надписи нет совсем — один раз прошейте дисплей по USB-кабелю.';
+  }
+  if (stage === 'transfer') {
+    showRecovery();
+    return `${e.message}. Прошивка прервалась. ${ERASED_NOTE} Можно сразу подключить его к компьютеру и прошить по USB.`;
+  }
+  if (stage === 'jump') {
+    return `${e.message}. Старая прошивка не тронута: примерно через минуту дисплей выйдет из режима обновления и выключится. ` +
+      'Включите его кнопкой, снова включите режим обновления и держите телефон рядом с дисплеем.';
+  }
+  return `${e.message}. Старая прошивка не тронута. Включите режим обновления на дисплее заново и попробуйте ещё раз.`;
+}
+
 function explain(e) {
   if (e instanceof FirmwareError) return e.message;
   if (e.name === 'AbortError') return 'Прошивка отменена.';
-  if (e.code === 'no-dfu') {
-    return 'На дисплее не включён режим обновления по Bluetooth. Выключите дисплей и включите его, удерживая кнопку ещё 3 секунды, ' +
-      'пока не появится «Обновление по Bluetooth». Если надпись не появляется — один раз прошейте дисплей по USB-кабелю.';
-  }
-  if (e instanceof BleDfuError || (state.method === 'ble' && e instanceof DOMException)) {
-    return `${e.message}. Включите режим обновления на дисплее заново, держите телефон рядом и попробуйте ещё раз. ` +
-      'Если дисплей не включается, подождите минуту или прошейте его по USB-кабелю.';
-  }
   if (e.name === 'InvalidStateError' || e.name === 'NetworkError') {
     return 'Не удалось открыть порт. Закройте другие программы, которые его используют (Arduino IDE, монитор порта), переподключите плату и попробуйте снова.';
   }
   if (e instanceof DfuError) {
-    return `${e.message}. Переподключите плату и попробуйте снова. Если не помогает — переведите её в режим загрузчика двойным замыканием RST на GND.`;
+    return `${e.message}. Переподключите плату и нажмите «Прошить» ещё раз.`;
   }
   return `Ошибка: ${e.message}`;
 }
@@ -626,6 +644,7 @@ async function flash() {
   setBusy(true);
   $('log').textContent = '';
   setProgress(null);
+  let dfu = null;
 
   try {
     const fw = await firmwarePromise;
@@ -643,7 +662,7 @@ async function flash() {
 
     setStatus('Записываю прошивку… Не отключайте плату.', 'wait');
     setProgress(0, image.bin.length);
-    const dfu = new SerialDfu(port, { log, onProgress: setProgress });
+    dfu = new SerialDfu(port, { log, onProgress: setProgress });
     await dfu.open();
     try {
       await dfu.flash(image.bin, image.dat);
@@ -657,7 +676,12 @@ async function flash() {
     setStatus('Готово! Прошивка записана, плата перезагрузилась. Если экран не включился, нажмите и удерживайте кнопку.', 'ok');
   } catch (e) {
     log(`Ошибка: ${e.message}`);
-    setStatus(explain(e), 'error');
+    if (dfu?.started) {
+      showRecovery();
+      setStatus(`${explain(e)} ${ERASED_NOTE}`, 'error');
+    } else {
+      setStatus(explain(e), 'error');
+    }
   } finally {
     setBusy(false);
   }
@@ -685,6 +709,7 @@ async function flashBle() {
   $('log').textContent = '';
   setProgress(null);
   const dfu = new BleDfu(device, { log, onProgress: setProgress });
+  let stage = 'connect'; // connect → jump (плата перезагружается в загрузчик) → transfer (dfu.started)
 
   try {
     const fw = await firmwarePromise;
@@ -696,6 +721,7 @@ async function flashBle() {
     await dfu.connect();
     if (dfu.inApplication) {
       setStatus('Перезагружаю дисплей в режим загрузчика…', 'wait');
+      stage = 'jump';
       await dfu.enterBootloader();
     }
 
@@ -709,7 +735,7 @@ async function flashBle() {
     setStatus('Готово! Прошивка записана, дисплей перезагрузился. Если экран не включился, нажмите и удерживайте кнопку.', 'ok');
   } catch (e) {
     log(`Ошибка: ${e.message}`);
-    setStatus(explain(e), 'error');
+    setStatus(explainBle(e, dfu.started ? 'transfer' : stage), 'error');
   } finally {
     await dfu.disconnect();
     setBusy(false);

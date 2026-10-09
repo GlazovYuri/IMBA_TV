@@ -190,6 +190,8 @@ export class BleDfu {
     this.onProgress(0, bin.length);
 
     this.log(`Старт DFU, размер приложения ${bin.length} байт`);
+    // после этой команды загрузчик стирает старую прошивку
+    this.started = true;
     await this.writeControl(new Uint8Array([OP_START, UPDATE_APPLICATION]));
     await this.writePacket(u32le(0, 0, bin.length));
     // загрузчик стирает место под прошивку и только потом отвечает
