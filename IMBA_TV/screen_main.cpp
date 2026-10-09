@@ -1,11 +1,10 @@
 #include "screen_main.h"
+#include "config.h"
 #include "GyverOLED.h"
 
 extern GyverOLED<SSH1106_128x64> oled;
 
 static const int scr_width = 128;
-// максимальное напряжение колеса (В * 10): по нему резервируется место под текст в режиме напряжения
-static const uint16_t euc_voltage_max_x10 = 1512;
 
 static const uint8_t charging_bitmap[] = {
   0xff, 0x81, 0xb1, 0x99, 0x8d, 0x9d, 0xb9, 0xb1, 0x99, 0x8d, 0x81, 0xff, 0x3c, 0x3c
@@ -93,8 +92,10 @@ static void drawEucVoltage(int x, int y, euc_data_t& data)
   else
     snprintf(text, sizeof(text), "--.-");
 
+  // по максимальному напряжению колеса резервируется место под текст
+  uint16_t voltage_max_x10 = config().wheel_voltage_x10;
   char max_text[12];
-  snprintf(max_text, sizeof(max_text), "%u.%u", euc_voltage_max_x10 / 10, euc_voltage_max_x10 % 10);
+  snprintf(max_text, sizeof(max_text), "%u.%u", voltage_max_x10 / 10, voltage_max_x10 % 10);
 
   // + 1 знакоместо под "В"
   int field_x = scr_width - (strlen(max_text) + 1) * 6;

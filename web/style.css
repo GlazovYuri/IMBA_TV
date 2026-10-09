@@ -276,3 +276,49 @@ footer { text-align: center; font-size: 15px; margin-top: 24px; }
   h1 { font-size: 24px; }
   .actions .button { flex: 1 1 100%; }
 }
+
+/* Настройки */
+.config { display: grid; gap: 18px; }
+.config fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.config legend { padding: 0; font-weight: 600; font-size: 16px; }
+.config .group-help { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+.config .fields { display: grid; gap: 10px; margin-top: 10px; }
+.field { display: grid; gap: 4px; }
+.field-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.field-label { font-size: 15px; }
+.field-help { font-size: 13px; color: var(--muted); }
+.field input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); flex: none; }
+.field-check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.field-check input { margin-top: 2px !important; }
+.field select, .field input[type="number"] {
+  font: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  min-height: 40px;
+  max-width: 100%;
+}
+.field input[type="number"] { width: 110px; }
+.field input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--accent); }
+.field output, .field .unit { color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; }
+.field output { min-width: 3.5em; text-align: right; }
+.field.invalid input { border-color: var(--danger); }
+.field-error { font-size: 13px; color: var(--danger); }
+.config-actions { margin-top: 16px; }
+.config-note { margin: 10px 0 0; font-size: 14px; }
+.downloads button.download {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

@@ -1,15 +1,16 @@
 #include <Adafruit_TinyUSB.h>
+#include "config.h"
 #include "utils.h"
 #include "battery.h"
 #include "ble.h"
 #include "display.h"
 #include "animations.h"
 
-static const uint8_t brightness = 255;
 static const uint32_t update_period = 40; //ms
 
 void setup()
 {
+    configLoad();
     softDeviceInit();
 
     buttonInitSense();
@@ -37,7 +38,7 @@ void setup()
     powerOn();
     delay(100);
     displayInit();
-    displaySetBrightness(brightness);
+    displaySetBrightness(config().brightness);
 
     displayPlayIntro(batteryGetCharge(), isUsbConnected(), bleGetEucData());
 }

@@ -9,6 +9,7 @@ on:
       - 'boards/**'
       - '.github/workflows/firmware.yml'
       - '.github/scripts/hex2uf2.py'
+      - 'tools/gen_config.py'
   workflow_dispatch:
     inputs:
       bump:
@@ -100,6 +101,9 @@ jobs:
           core="$HOME/.arduino15/packages/adafruit/hardware/nrf52/$CORE_VERSION"
           cp boards/boards.txt "$core/boards.txt"
           cp -r boards/imba_pro_micro "$core/variants/"
+
+      - name: Check config_gen.h
+        run: python3 tools/gen_config.py --check
 
       - name: Build
         env:

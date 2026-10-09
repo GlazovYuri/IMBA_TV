@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "title": "Экраны",
+      "help": "Страницы, которые переключаются коротким нажатием кнопки",
+      "require_one": true,
+      "fields": [
+        {
+          "key": "screen_charge",
+          "type": "bool",
+          "default": true,
+          "label": "Скорость, ШИМ и заряд колеса"
+        },
+        {
+          "key": "screen_voltage",
+          "type": "bool",
+          "default": true,
+          "label": "Скорость, ШИМ и напряжение колеса"
+        },
+        {
+          "key": "screen_grid",
+          "type": "bool",
+          "default": true,
+          "label": "Сетка: заряд, напряжение, температура, пробег, связь"
+        }
+      ]
+    },
+    {
+      "title": "Предупреждение о ШИМ",
+      "fields": [
+        {
+          "key": "pwm_alarm",
+          "type": "bool",
+          "default": true,
+          "label": "Мигать экраном при превышении порога ШИМ",
+          "help": "Чем выше ШИМ, тем чаще мигание"
+        },
+        {
+          "key": "pwm_alarm_source",
+          "type": "u8",
+          "default": 0,
+          "label": "Порог",
+          "options": [
+            { "value": 0, "id": "APP", "label": "Из настроек приложения LoEUC" },
+            { "value": 1, "id": "FIXED", "label": "Свой" }
+          ],
+          "depends": { "pwm_alarm": true }
+        },
+        {
+          "key": "pwm_alarm_threshold",
+          "type": "u8",
+          "default": 80,
+          "min": 30,
+          "max": 99,
+          "unit": "%",
+          "label": "Свой порог ШИМ",
+          "depends": { "pwm_alarm": true, "pwm_alarm_source": 1 }
+        }
+      ]
+    },
+    {
+      "title": "Дисплей",
+      "fields": [
+        {
+          "key": "brightness",
+          "type": "u8",
+          "default": 100,
+          "min": 5,
+          "max": 100,
+          "step": 5,
+          "unit": "%",
+          "widget": "range",
+          "label": "Яркость"
+        },
+        {
+          "key": "wheel_voltage_x10",
+          "type": "u16",
+          "default": 1512,
+          "label": "Батарея колеса",
+          "help": "По максимальному напряжению рассчитывается место под цифры на экране напряжения",
+          "options": [
+            { "value": 840, "id": "20S", "label": "84 В (20S)" },
+            { "value": 1008, "id": "24S", "label": "100,8 В (24S)" },
+            { "value": 1260, "id": "30S", "label": "126 В (30S)" },
+            { "value": 1344, "id": "32S", "label": "134,4 В (32S)" },
+            { "value": 1512, "id": "36S", "label": "151,2 В (36S)" },
+            { "value": 1680, "id": "40S", "label": "168 В (40S)" },
+            { "value": 1764, "id": "42S", "label": "176,4 В (42S)" }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Анимации",
+      "fields": [
+        {
+          "key": "intro",
+          "type": "u8",
+          "default": 2,
+          "label": "Заставка при включении",
+          "options": [
+            { "value": 0, "id": "NONE", "label": "Без заставки" },
+            { "value": 1, "id": "LOGO", "label": "Только логотип" },
+            { "value": 2, "id": "RANDOM", "label": "Случайная анимация" },
+            { "value": 3, "id": "WAVE", "label": "Волна" },
+            { "value": 4, "id": "BREAK", "label": "Разрушение" },
+            { "value": 5, "id": "EXPLOSION", "label": "Взрыв" }
+          ]
+        },
+        {
+          "key": "poweroff_animation",
+          "type": "bool",
+          "default": true,
+          "label": "Анимация выключения, как у старого телевизора"
+        }
+      ]
+    },
+    {
+      "title": "Кнопка",
+      "fields": [
+        {
+          "key": "power_on_ms",
+          "type": "u16",
+          "default": 500,
+          "min": 100,
+          "max": 3000,
+          "step": 100,
+          "unit": "мс",
+          "label": "Удержание для включения"
+        },
+        {
+          "key": "power_off_ms",
+          "type": "u16",
+          "default": 1000,
+          "min": 500,
+          "max": 5000,
+          "step": 100,
+          "unit": "мс",
+          "label": "Удержание для выключения",
+          "help": "Более короткое нажатие переключает экран"
+        }
+      ]
+    }
+  ]
+}

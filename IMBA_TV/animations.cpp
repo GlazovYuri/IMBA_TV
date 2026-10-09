@@ -1,5 +1,6 @@
 #include "animations.h"
 #include "display.h"
+#include "config.h"
 #include "GyverOLED.h"
 #include "logo.h"
 #include <math.h>
@@ -24,8 +25,16 @@ void displayPowerOffAnimation(uint8_t dev_charge, bool is_charging, euc_data_t& 
   static const int cx = 64;
   static const int cy = 32;
 
-  euc_data_t snapshot = data;
   oled.invertDisplay(false);
+  if(!config().poweroff_animation)
+  {
+    oled.clear();
+    oled.update();
+    return;
+  }
+
+  euc_data_t snapshot = data;
+  uint8_t contrast = displayGetContrast();
   uint32_t start = millis();
   uint32_t t;
   while((t = millis() - start) < collapse_time + shrink_time + fade_time)
@@ -50,7 +59,7 @@ void displayPowerOffAnimation(uint8_t dev_charge, bool is_charging, euc_data_t& 
     else
     {
       float k = 1.0f - (float)(t - collapse_time - shrink_time) / fade_time;
-      oled.setContrast((uint8_t)(255.0f * k));
+      oled.setContrast((uint8_t)(contrast * k));
       oled.clear();
       fillRect(cx - 1, cy - 1, cx, cy, 1);
     }
@@ -590,6 +599,17 @@ void displayPlayIntroNum(int anim, uint32_t seed, uint8_t dev_charge, bool is_ch
 
 void displayPlayIntro(uint8_t dev_charge, bool is_charging, euc_data_t& data)
 {
+  uint8_t intro = config().intro;
+  if(intro == CONFIG_INTRO_NONE) return;
+  if(intro == CONFIG_INTRO_LOGO)
+  {
+    displayDrawLogo();
+    delay(intro_logo_hold);
+    return;
+  }
+
   uint32_t seed = introSeed();
-  displayPlayIntroNum((seed >> 16) % 3, seed, dev_charge, is_charging, data);
+  // волна, разрушение, взрыв - в порядке displayPlayIntroNum
+  int anim = (intro == CONFIG_INTRO_RANDOM) ? (seed >> 16) % 3 : intro - CONFIG_INTRO_WAVE;
+  displayPlayIntroNum(anim, seed, dev_charge, is_charging, data);
 }

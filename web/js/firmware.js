@@ -44,6 +44,31 @@ export function makeInitPacket(bin, { sdReq = [SD_REQ_ANY] } = {}) {
   return out;
 }
 
+// Тот же init-пакет, но с CRC изменённого образа (например, после записи настроек)
+export function withImageCrc(dat, bin) {
+  const out = dat.slice();
+  const crc = crc16(bin);
+  out[out.length - 2] = crc & 0xff;
+  out[out.length - 1] = crc >> 8;
+  return out;
+}
+
+// UF2 для копирования на диск загрузчика, как .github/scripts/hex2uf2.py
+export function makeUf2(bin, start = APP_START) {
+  const blocks = Math.ceil(bin.length / 256);
+  const out = new Uint8Array(blocks * 512);
+  const v = new DataView(out.buffer);
+  for (let n = 0; n < blocks; n++) {
+    const off = n * 512;
+    [0x0a324655, 0x9e5d5157, 0x2000, start + n * 256, 256, n, blocks, UF2_FAMILY_NRF52840]
+      .forEach((word, i) => v.setUint32(off + i * 4, word, true));
+    out.fill(0xff, off + 32, off + 32 + 256);
+    out.set(bin.subarray(n * 256, (n + 1) * 256), off + 32);
+    v.setUint32(off + 508, 0x0ab16f30, true);
+  }
+  return out;
+}
+
 // ---------- ZIP ----------
 
 async function inflateRaw(data) {
