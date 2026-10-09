@@ -150,3 +150,50 @@ void displayUpdateAlarm(euc_data_t& data)
     oled.invertDisplay(false);
   }
 }
+
+void displayClear()
+{
+  oled.invertDisplay(false);
+  oled.clear();
+  oled.update();
+}
+
+// Удержание кнопки после включения: полоса заполняется, по её окончании включается режим обновления
+void displayDrawUpdateHold(uint8_t percent)
+{
+  oled.clear();
+  // строки ближе 8 px: текст по умолчанию пишется целыми байтами и стёр бы соседнюю строку
+  oled.textMode(BUF_ADD);
+  oled.setScale(1);
+  oled.setCursorXY(4, 4);
+  oled.print("Держите кнопку,");
+  oled.setCursorXY(4, 14);
+  oled.print("чтобы включить");
+  oled.setCursorXY(4, 24);
+  oled.print("обновление по");
+  oled.setCursorXY(4, 34);
+  oled.print("Bluetooth");
+  oled.textMode(BUF_REPLACE);
+
+  int fill = (scr_width - 10) * constrain(percent, 0, 100) / 100;
+  oled.rect(4, 48, scr_width - 5, 57, OLED_STROKE);
+  if(fill > 0) oled.rect(5, 49, 4 + fill, 56, OLED_FILL);
+  oled.update();
+}
+
+// Экран режима обновления. Во время прошивки он остаётся на дисплее как есть
+void displayDrawUpdateMode(bool connected)
+{
+  oled.clear();
+  oled.setScale(2);
+  oled.setCursorXY(4, 0);
+  oled.print("Обновление");
+  oled.setScale(1);
+  oled.setCursorXY(4, 18);
+  oled.print("по Bluetooth");
+  oled.setCursorXY(4, 36);
+  oled.print(connected ? "Телефон подключён" : "Ждём подключения");
+  oled.setCursorXY(4, 54);
+  oled.print("Выкл: держать кнопку");
+  oled.update();
+}

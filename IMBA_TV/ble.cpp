@@ -24,6 +24,7 @@ const uint32_t temperature_offset = 14;
 const uint32_t trip_offset = 16;
 const uint32_t limit_offset = 18;
 
+BLEDfu bledfu;
 BLEDis bledis;
 BLEService euc_service(service_uuid);
 BLECharacteristic euc_char(char_uuid);
@@ -131,9 +132,12 @@ static void eucCharWriteCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint
   frameTimingUpdate();
 }
 
-void bleInit()
+void bleInit(bool update_mode)
 {
   Bluefruit.setTxPower(tx_power);
+
+  // сервис обновления первым, как в примерах Adafruit
+  if(update_mode) bledfu.begin();
 
   bledis.setManufacturer("IMBA");
   bledis.setModel("IMBA TV");
@@ -141,24 +145,29 @@ void bleInit()
   bledis.setFirmwareRev(FW_VERSION);
   bledis.begin();
 
-  euc_service.begin();
+  if(!update_mode)
+  {
+    euc_service.begin();
 
-  euc_char.setProperties(CHR_PROPS_WRITE | CHR_PROPS_WRITE_WO_RESP);
-  euc_char.setPermission(SECMODE_NO_ACCESS, SECMODE_OPEN);
-  euc_char.setFixedLen(pack_len);
-  euc_char.setWriteCallback(eucCharWriteCallback);
-  euc_char.begin();
+    euc_char.setProperties(CHR_PROPS_WRITE | CHR_PROPS_WRITE_WO_RESP);
+    euc_char.setPermission(SECMODE_NO_ACCESS, SECMODE_OPEN);
+    euc_char.setFixedLen(pack_len);
+    euc_char.setWriteCallback(eucCharWriteCallback);
+    euc_char.begin();
+  }
 
   Bluefruit.Periph.setConnIntervalMS(20, 30);
   Bluefruit.Periph.setConnectCallback(bleConnectCallback);
   Bluefruit.Periph.setDisconnectCallback(bleDisconnectCallback);
 }
 
-void bleAdvertise()
+void bleAdvertise(bool update_mode)
 {
   Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
   Bluefruit.Advertising.addTxPower();
-  Bluefruit.Advertising.addService(euc_service);
+  // в режиме обновления сайт ищет плату по сервису DFU, а LoEUC её не видит
+  if(update_mode) Bluefruit.Advertising.addService(bledfu);
+  else Bluefruit.Advertising.addService(euc_service);
   Bluefruit.ScanResponse.addName();
 
   Bluefruit.Advertising.restartOnDisconnect(true);

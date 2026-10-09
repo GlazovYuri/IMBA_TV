@@ -11,3 +11,8 @@ void displayNextMode();
 void displayRenderIface(uint8_t dev_charge, bool is_charging, euc_data_t& data);
 void displayDrawIface(uint8_t dev_charge, bool is_charging, euc_data_t& data);
 void displayUpdateAlarm(euc_data_t& data);
+void displayClear();
+
+// режим обновления по Bluetooth
+void displayDrawUpdateHold(uint8_t percent);
+void displayDrawUpdateMode(bool connected);

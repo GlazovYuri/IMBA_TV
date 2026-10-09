@@ -90,3 +90,4 @@ test('настроенная прошивка проходит проверку 
   assert.deepEqual(fw.bin.subarray(0, out.length), out);
   assert.deepEqual(readValues(fw.bin, findConfig(fw.bin)), values);
 });
+
