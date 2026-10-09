@@ -3,171 +3,336 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>IMBA TV — прошивка</title>
-  <meta name="description" content="Обновление прошивки дисплея IMBA TV прямо из браузера">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='18' rx='4' fill='%230b7a75'/%3E%3Crect x='6' y='10' width='20' height='10' rx='1.5' fill='%23e3f3f2'/%3E%3Crect x='11' y='26' width='10' height='2.5' rx='1.25' fill='%230b7a75'/%3E%3C/svg%3E">
+  <title>Прошивка IMBA TV</title>
+  <meta name="description" content="Обновление и настройка прошивки дисплея IMBA TV прямо из браузера: по USB-кабелю или по Bluetooth">
+  <meta name="theme-color" content="#f3f2ed" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161614" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -32 128 128'%3E%3Crect y='-32' width='128' height='128' fill='%231d1d1b'/%3E%3Cpath fill='%23f2c230' d='M6 3h115v1h-115zM6 4h116v2h-116zM119 6h3v51h-3zM17 10h4v47h-4zM28 10h1v1h-1zM44 10h37v1h-37zM83 10h23v1h-23zM113 10h2v2h-2zM28 11h2v1h-2zM45 11h36v1h-36zM84 11h22v1h-22zM28 12h3v2h-3zM45 12h35v1h-35zM103 12h2v1h-2zM112 12h3v1h-3zM46 13h33v2h-33zM102 13h3v1h-3zM111 13h4v2h-4zM28 14h4v2h-4zM102 14h2v1h-2zM47 15h6v2h-6zM73 15h5v1h-5zM101 15h2v2h-2zM110 15h5v2h-5zM28 16h5v1h-5zM72 16h6v1h-6zM28 17h6v2h-6zM48 17h6v1h-6zM72 17h5v1h-5zM100 17h2v1h-2zM109 17h6v1h-6zM49 18h5v1h-5zM71 18h6v1h-6zM99 18h3v1h-3zM109 18h5v1h-5zM28 19h7v2h-7zM41 19h1v1h-1zM49 19h6v1h-6zM71 19h5v1h-5zM99 19h2v1h-2zM108 19h6v1h-6zM41 20h2v2h-2zM50 20h5v1h-5zM70 20h5v1h-5zM98 20h2v2h-2zM107 20h6v2h-6zM28 21h8v2h-8zM50 21h6v1h-6zM69 21h6v1h-6zM41 22h3v1h-3zM51 22h6v1h-6zM69 22h5v1h-5zM97 22h2v1h-2zM106 22h6v1h-6zM28 23h9v1h-9zM41 23h4v2h-4zM52 23h5v1h-5zM68 23h6v1h-6zM96 23h3v1h-3zM106 23h5v1h-5zM28 24h10v2h-10zM52 24h6v1h-6zM68 24h5v1h-5zM96 24h2v1h-2zM105 24h6v1h-6zM41 25h5v2h-5zM53 25h5v1h-5zM67 25h6v1h-6zM105 25h5v1h-5zM28 26h4v31h-4zM33 26h6v1h-6zM53 26h6v1h-6zM67 26h5v1h-5zM104 26h6v1h-6zM34 27h5v1h-5zM41 27h6v1h-6zM54 27h5v1h-5zM66 27h30v1h-30zM103 27h12v2h-12zM34 28h6v1h-6zM41 28h7v2h-7zM54 28h6v1h-6zM65 28h31v1h-31zM35 29h5v1h-5zM55 29h6v1h-6zM65 29h30v1h-30zM102 29h13v2h-13zM35 30h14v1h-14zM56 30h5v1h-5zM64 30h31v1h-31zM36 31h13v1h-13zM56 31h6v1h-6zM64 31h30v1h-30zM101 31h14v1h-14zM37 32h13v2h-13zM57 32h5v1h-5zM88 32h5v1h-5zM100 32h6v2h-6zM57 33h6v1h-6zM87 33h6v1h-6zM38 34h13v1h-13zM58 34h6v2h-6zM87 34h5v1h-5zM99 34h6v1h-6zM38 35h7v1h-7zM46 35h6v2h-6zM86 35h6v1h-6zM99 35h5v1h-5zM39 36h6v2h-6zM59 36h6v1h-6zM86 36h5v1h-5zM98 36h6v1h-6zM47 37h6v1h-6zM60 37h5v1h-5zM85 37h6v1h-6zM98 37h5v1h-5zM40 38h5v1h-5zM48 38h5v1h-5zM60 38h6v1h-6zM85 38h5v1h-5zM97 38h6v1h-6zM41 39h4v2h-4zM48 39h6v1h-6zM61 39h5v1h-5zM84 39h5v1h-5zM96 39h6v2h-6zM49 40h5v1h-5zM61 40h6v1h-6zM83 40h6v1h-6zM42 41h3v2h-3zM49 41h6v1h-6zM62 41h6v2h-6zM83 41h5v1h-5zM95 41h6v1h-6zM50 42h6v1h-6zM82 42h6v1h-6zM95 42h5v1h-5zM43 43h2v2h-2zM51 43h5v1h-5zM63 43h6v1h-6zM82 43h5v1h-5zM94 43h6v1h-6zM51 44h6v1h-6zM64 44h5v1h-5zM81 44h6v1h-6zM94 44h5v1h-5zM52 45h5v1h-5zM64 45h6v1h-6zM81 45h5v1h-5zM93 45h6v1h-6zM52 46h6v1h-6zM65 46h5v1h-5zM80 46h5v1h-5zM92 46h6v1h-6zM53 47h5v1h-5zM65 47h6v1h-6zM79 47h6v1h-6zM92 47h5v1h-5zM53 48h6v1h-6zM66 48h6v1h-6zM79 48h5v1h-5zM91 48h6v1h-6zM54 49h6v1h-6zM67 49h5v1h-5zM78 49h6v1h-6zM91 49h5v1h-5zM55 50h5v1h-5zM67 50h6v1h-6zM78 50h5v1h-5zM90 50h6v1h-6zM55 51h6v1h-6zM68 51h5v1h-5zM77 51h5v1h-5zM89 51h6v2h-6zM56 52h5v1h-5zM68 52h6v1h-6zM76 52h6v1h-6zM76 53h5v1h-5zM90 53h4v1h-4zM75 54h6v1h-6zM75 55h5v1h-5zM74 56h6v1h-6zM6 57h15v3h-15zM28 57h42v1h-42zM74 57h5v1h-5zM81 57h41v1h-41zM28 58h43v1h-43zM73 58h5v2h-5zM80 58h42v2h-42zM28 59h42v1h-42zM73 60h4v1h-4zM74 61h3v1h-3zM74 62h2v1h-2z'/%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/sofia-sans-condensed-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/sofia-sans-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <!-- иконки Tabler Icons (MIT), обводка 2 -->
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5l10 -10"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 9l5 -5l5 5"/><path d="M12 4l0 12"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6l6 -6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></symbol>
+    <symbol id="i-telegram" viewBox="0 0 24 24"><path d="M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6"/><path d="M11 13l9 -9"/><path d="M15 4h5v5"/></symbol>
+  </svg>
+
+  <a class="skip" href="#op1">К выбору прошивки</a>
+
+  <header class="runhead">
+    <div class="runhead-in">
+      <span class="runhead-name">IMBA TV</span>
+      <span class="runhead-doc">Руководство по обновлению</span>
+      <span class="runhead-section" id="runhead-section" aria-live="off">Обновление прошивки</span>
+      <span class="runhead-rev">Ред. <b id="runhead-rev">…</b></span>
+    </div>
+  </header>
+
   <main>
-    <header class="masthead">
-      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
-        <rect x="2" y="6" width="28" height="18" rx="4" class="logo-body"/>
-        <rect x="6" y="10" width="20" height="10" rx="1.5" class="logo-screen"/>
-        <rect x="11" y="26" width="10" height="2.5" rx="1.25" class="logo-body"/>
-      </svg>
-      <div>
-        <h1>IMBA TV</h1>
-        <p class="subtitle">Обновление прошивки дисплея прямо из браузера</p>
-      </div>
-    </header>
-
-    <div id="unsupported" class="notice notice-warn" hidden></div>
-
-    <section class="card" aria-labelledby="step1-title">
-      <h2 id="step1-title"><span class="step">1</span>Выберите прошивку</h2>
-
-      <div id="versions" class="options" role="radiogroup" aria-labelledby="step1-title">
-        <p class="muted" id="versions-loading">Загружаю список версий…</p>
-      </div>
-      <button type="button" id="show-all" class="link-button" hidden></button>
-
-      <label class="option" id="own-option">
-        <input type="radio" name="firmware" value="own">
-        <span class="option-body">
-          <span class="option-title">Свой файл</span>
-          <span class="option-meta">DFU-пакет .zip из Arduino IDE, .hex или .uf2</span>
-        </span>
-      </label>
-      <div id="dropzone" class="dropzone" hidden>
-        <input type="file" id="file-input" accept=".zip,.hex,.uf2" hidden>
-        <p>Перетащите файл сюда или <button type="button" id="file-pick" class="link-button">выберите на компьютере</button></p>
-        <p id="file-name" class="file-name" hidden></p>
+    <section class="opener" aria-labelledby="title" data-guide="Обновление прошивки">
+      <div class="opener-text">
+        <h1 id="title">Обновление прошивки</h1>
+        <p class="lede">Прошивка и настройка дисплея IMBA TV прямо из браузера: по USB-кабелю с компьютера или по Bluetooth с телефона.</p>
+        <div id="unsupported" class="callout callout-caution" data-label="Внимание" hidden></div>
       </div>
 
-      <div id="details" class="details" hidden>
-        <p id="fw-check" class="fw-check"></p>
-        <div id="notes-box" hidden>
-          <h3 id="notes-title"></h3>
-          <div id="notes" class="notes"></div>
+      <figure class="fig fig-screen">
+        <div class="screen">
+          <svg viewBox="0 0 128 64" role="img" aria-label="Логотип IMBA на экране дисплея" shape-rendering="crispEdges">
+            <path d="M6 3h115v1h-115zM6 4h116v2h-116zM119 6h3v51h-3zM17 10h4v47h-4zM28 10h1v1h-1zM44 10h37v1h-37zM83 10h23v1h-23zM113 10h2v2h-2zM28 11h2v1h-2zM45 11h36v1h-36zM84 11h22v1h-22zM28 12h3v2h-3zM45 12h35v1h-35zM103 12h2v1h-2zM112 12h3v1h-3zM46 13h33v2h-33zM102 13h3v1h-3zM111 13h4v2h-4zM28 14h4v2h-4zM102 14h2v1h-2zM47 15h6v2h-6zM73 15h5v1h-5zM101 15h2v2h-2zM110 15h5v2h-5zM28 16h5v1h-5zM72 16h6v1h-6zM28 17h6v2h-6zM48 17h6v1h-6zM72 17h5v1h-5zM100 17h2v1h-2zM109 17h6v1h-6zM49 18h5v1h-5zM71 18h6v1h-6zM99 18h3v1h-3zM109 18h5v1h-5zM28 19h7v2h-7zM41 19h1v1h-1zM49 19h6v1h-6zM71 19h5v1h-5zM99 19h2v1h-2zM108 19h6v1h-6zM41 20h2v2h-2zM50 20h5v1h-5zM70 20h5v1h-5zM98 20h2v2h-2zM107 20h6v2h-6zM28 21h8v2h-8zM50 21h6v1h-6zM69 21h6v1h-6zM41 22h3v1h-3zM51 22h6v1h-6zM69 22h5v1h-5zM97 22h2v1h-2zM106 22h6v1h-6zM28 23h9v1h-9zM41 23h4v2h-4zM52 23h5v1h-5zM68 23h6v1h-6zM96 23h3v1h-3zM106 23h5v1h-5zM28 24h10v2h-10zM52 24h6v1h-6zM68 24h5v1h-5zM96 24h2v1h-2zM105 24h6v1h-6zM41 25h5v2h-5zM53 25h5v1h-5zM67 25h6v1h-6zM105 25h5v1h-5zM28 26h4v31h-4zM33 26h6v1h-6zM53 26h6v1h-6zM67 26h5v1h-5zM104 26h6v1h-6zM34 27h5v1h-5zM41 27h6v1h-6zM54 27h5v1h-5zM66 27h30v1h-30zM103 27h12v2h-12zM34 28h6v1h-6zM41 28h7v2h-7zM54 28h6v1h-6zM65 28h31v1h-31zM35 29h5v1h-5zM55 29h6v1h-6zM65 29h30v1h-30zM102 29h13v2h-13zM35 30h14v1h-14zM56 30h5v1h-5zM64 30h31v1h-31zM36 31h13v1h-13zM56 31h6v1h-6zM64 31h30v1h-30zM101 31h14v1h-14zM37 32h13v2h-13zM57 32h5v1h-5zM88 32h5v1h-5zM100 32h6v2h-6zM57 33h6v1h-6zM87 33h6v1h-6zM38 34h13v1h-13zM58 34h6v2h-6zM87 34h5v1h-5zM99 34h6v1h-6zM38 35h7v1h-7zM46 35h6v2h-6zM86 35h6v1h-6zM99 35h5v1h-5zM39 36h6v2h-6zM59 36h6v1h-6zM86 36h5v1h-5zM98 36h6v1h-6zM47 37h6v1h-6zM60 37h5v1h-5zM85 37h6v1h-6zM98 37h5v1h-5zM40 38h5v1h-5zM48 38h5v1h-5zM60 38h6v1h-6zM85 38h5v1h-5zM97 38h6v1h-6zM41 39h4v2h-4zM48 39h6v1h-6zM61 39h5v1h-5zM84 39h5v1h-5zM96 39h6v2h-6zM49 40h5v1h-5zM61 40h6v1h-6zM83 40h6v1h-6zM42 41h3v2h-3zM49 41h6v1h-6zM62 41h6v2h-6zM83 41h5v1h-5zM95 41h6v1h-6zM50 42h6v1h-6zM82 42h6v1h-6zM95 42h5v1h-5zM43 43h2v2h-2zM51 43h5v1h-5zM63 43h6v1h-6zM82 43h5v1h-5zM94 43h6v1h-6zM51 44h6v1h-6zM64 44h5v1h-5zM81 44h6v1h-6zM94 44h5v1h-5zM52 45h5v1h-5zM64 45h6v1h-6zM81 45h5v1h-5zM93 45h6v1h-6zM52 46h6v1h-6zM65 46h5v1h-5zM80 46h5v1h-5zM92 46h6v1h-6zM53 47h5v1h-5zM65 47h6v1h-6zM79 47h6v1h-6zM92 47h5v1h-5zM53 48h6v1h-6zM66 48h6v1h-6zM79 48h5v1h-5zM91 48h6v1h-6zM54 49h6v1h-6zM67 49h5v1h-5zM78 49h6v1h-6zM91 49h5v1h-5zM55 50h5v1h-5zM67 50h6v1h-6zM78 50h5v1h-5zM90 50h6v1h-6zM55 51h6v1h-6zM68 51h5v1h-5zM77 51h5v1h-5zM89 51h6v2h-6zM56 52h5v1h-5zM68 52h6v1h-6zM76 52h6v1h-6zM76 53h5v1h-5zM90 53h4v1h-4zM75 54h6v1h-6zM75 55h5v1h-5zM74 56h6v1h-6zM6 57h15v3h-15zM28 57h42v1h-42zM74 57h5v1h-5zM81 57h41v1h-41zM28 58h43v1h-43zM73 58h5v2h-5zM80 58h42v2h-42zM28 59h42v1h-42zM73 60h4v1h-4zM74 61h3v1h-3zM74 62h2v1h-2z" fill="currentColor"/>
+          </svg>
         </div>
-        <p id="release-link" hidden><a href="#" target="_blank" rel="noopener">Страница релиза на GitHub</a></p>
+        <figcaption><b>Рис. 1.</b> Экран IMBA TV при включении: логотип, 128×64 точки</figcaption>
+      </figure>
+
+      <div class="needs" aria-label="Что понадобится">
+        <h2 class="needs-title">Что понадобится</h2>
+        <dl class="needs-grid">
+          <div>
+            <dt><span class="code">Способ А</span> USB-кабель</dt>
+            <dd>Компьютер с Chrome, Edge, Яндекс Браузером или Opera</dd>
+            <dd>USB-кабель с передачей данных</dd>
+          </div>
+          <div>
+            <dt><span class="code">Способ Б</span> Bluetooth</dt>
+            <dd>Android или компьютер с Chrome, Edge, Яндекс Браузером; на iPhone браузер Bluefy</dd>
+            <dd>Заряд дисплея не меньше 30%</dd>
+            <dd>Прошивка с обновлением по Bluetooth: если её нет, один раз прошейте способом А</dd>
+          </div>
+        </dl>
+      </div>
+
+      <nav class="toc" aria-label="Содержание">
+        <ol>
+          <li><a href="#op1"><span class="toc-n">1</span>Выберите прошивку</a></li>
+          <li><a href="#op2"><span class="toc-n">2</span>Настройте под себя</a></li>
+          <li><a href="#op3"><span class="toc-n">3</span>Прошейте дисплей</a></li>
+          <li><a href="#trouble"><span class="toc-n" aria-hidden="true"><svg class="icon"><use href="#i-alert"/></svg></span>Неисправности</a></li>
+          <li><a href="#manual"><span class="toc-n">А</span>Файлы прошивки</a></li>
+        </ol>
+      </nav>
+    </section>
+
+    <section class="op" id="op1" aria-labelledby="step1-title" data-guide="Операция 1 из 3">
+      <div class="op-num" aria-hidden="true">1</div>
+      <div class="op-body">
+        <h2 id="step1-title">Выберите прошивку</h2>
+        <p class="op-lede">По умолчанию выбрана последняя версия. Можно взять другую или загрузить свой файл.</p>
+
+        <div class="parts">
+          <div class="parts-head" aria-hidden="true">
+            <span></span><span>Версия</span><span>Дата</span><span>Что изменилось</span>
+          </div>
+          <div id="versions" class="options" role="radiogroup" aria-labelledby="step1-title">
+            <p class="muted" id="versions-loading">Загружаю список версий…</p>
+          </div>
+          <div class="catalog-bar" id="catalog-bar" hidden>
+            <button type="button" id="show-all" class="catalog-toggle" aria-expanded="false" aria-controls="catalog">
+              <span id="show-all-text">Все версии</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg>
+            </button>
+          </div>
+          <div id="catalog" class="catalog" hidden>
+            <div class="catalog-search">
+              <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+              <input type="search" id="version-search" aria-label="Найти версию" placeholder="Номер версии или слово из изменений" autocomplete="off" spellcheck="false">
+            </div>
+            <div id="catalog-list" class="catalog-list"></div>
+            <p id="catalog-empty" class="catalog-empty" hidden></p>
+          </div>
+
+          <label class="option option-own" id="own-option">
+            <input type="radio" name="firmware" value="own">
+            <span class="option-body">
+              <span class="option-title">Свой файл</span>
+              <span class="option-meta">DFU-пакет .zip из Arduino IDE, .hex или .uf2</span>
+            </span>
+          </label>
+        </div>
+        <div id="dropzone" class="dropzone" hidden>
+          <input type="file" id="file-input" accept=".zip,.hex,.uf2" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg>
+          <p>Перетащите файл сюда или <button type="button" id="file-pick" class="link-button">выберите на компьютере</button></p>
+          <p id="file-name" class="file-name" hidden></p>
+        </div>
+
+        <div id="details" class="details" hidden>
+          <p id="fw-check" class="fw-check"></p>
+          <div id="notes-box" class="notes-box" hidden>
+            <h3 id="notes-title"></h3>
+            <div id="notes" class="notes"></div>
+          </div>
+          <p id="release-link" class="release-link" hidden><a href="#" target="_blank" rel="noopener">Страница релиза на GitHub<svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a></p>
+        </div>
       </div>
     </section>
 
-    <section class="card" aria-labelledby="config-title">
-      <h2 id="config-title"><span class="step">2</span>Настройте под себя</h2>
-      <p id="config-empty" class="muted">Выберите прошивку — здесь появятся её настройки.</p>
-      <form id="config-form" class="config" hidden></form>
-      <div id="config-actions" class="config-actions" hidden>
-        <button type="button" id="config-reset" class="link-button">Вернуть настройки по умолчанию</button>
-      </div>
-      <p id="config-note" class="muted config-note" hidden>
-        Настройки записываются в прошивку перед загрузкой и запоминаются в этом браузере.
-      </p>
-    </section>
-
-    <section class="card" aria-labelledby="step2-title">
-      <h2 id="step2-title"><span class="step">3</span>Прошейте плату</h2>
-
-      <div class="tabs" role="tablist" aria-label="Способ прошивки">
-        <button type="button" role="tab" id="tab-usb" aria-controls="panel-usb" aria-selected="true">USB-кабель</button>
-        <button type="button" role="tab" id="tab-ble" aria-controls="panel-ble" aria-selected="false">Bluetooth</button>
-      </div>
-
-      <div id="panel-usb" role="tabpanel" aria-labelledby="tab-usb">
-        <p id="usb-unsupported" class="notice notice-warn" hidden>
-          Этот браузер не умеет работать с USB-портами. Нужен Chrome, Edge, Яндекс Браузер или Opera на компьютере.
+    <section class="op" id="op2" aria-labelledby="config-title" data-guide="Операция 2 из 3">
+      <div class="op-num" aria-hidden="true">2</div>
+      <div class="op-body">
+        <h2 id="config-title">Настройте под себя</h2>
+        <p id="config-empty" class="op-lede">Выберите прошивку, и здесь появятся её настройки.</p>
+        <form id="config-form" class="config" hidden></form>
+        <div id="config-actions" class="config-actions" hidden>
+          <button type="button" id="config-reset" class="link-button">Вернуть настройки по умолчанию</button>
+        </div>
+        <p id="config-note" class="note" hidden>
+          <b>Примечание.</b> Настройки записываются в прошивку перед загрузкой и запоминаются в этом браузере.
         </p>
-        <ol class="steps">
-          <li>Подключите IMBA TV к компьютеру USB-кабелем с передачей данных — дисплей включится сам.</li>
-          <li>Нажмите «Прошить» и выберите в списке устройство <b>IMBA TV</b>.</li>
-          <li>Плата перезагрузится в режим загрузчика. Если браузер попросит, выберите новое устройство ещё раз.</li>
-        </ol>
-        <div class="actions">
-          <button type="button" id="flash" class="button button-primary" disabled>Прошить</button>
-          <button type="button" id="pick-bootloader" class="button button-primary" hidden>Выбрать порт загрузчика</button>
-          <button type="button" id="cancel" class="button" hidden>Отмена</button>
+      </div>
+    </section>
+
+    <section class="op" id="op3" aria-labelledby="step3-title" data-guide="Операция 3 из 3">
+      <div class="op-num" aria-hidden="true">3</div>
+      <div class="op-body">
+        <h2 id="step3-title">Прошейте дисплей</h2>
+
+        <div class="tabs" role="tablist" aria-label="Способ прошивки">
+          <button type="button" role="tab" id="tab-usb" aria-controls="panel-usb" aria-selected="true">
+            <span class="code">Способ А</span><span class="tab-name">USB-кабель</span>
+          </button>
+          <button type="button" role="tab" id="tab-ble" aria-controls="panel-ble" aria-selected="false">
+            <span class="code">Способ Б</span><span class="tab-name">Bluetooth</span>
+          </button>
         </div>
-      </div>
 
-      <div id="panel-ble" role="tabpanel" aria-labelledby="tab-ble" hidden>
-        <p id="ble-unsupported" class="notice notice-warn" hidden></p>
-        <ol class="steps">
-          <li>Закройте LoEUC на телефоне, чтобы он не занял подключение к дисплею.</li>
-          <li>Выключите дисплей. Включите его кнопкой и не отпускайте: после логотипа появится полоса,
-            держите, пока она не заполнится и не появится «Обновление по Bluetooth» (около 4 секунд). Нужно не меньше 30% заряда.</li>
-          <li>Нажмите «Прошить по Bluetooth» и выберите <b>IMBA TV</b>. Держите телефон рядом с дисплеем.</li>
-        </ol>
-        <p class="muted hint">Если надпись не появляется, на дисплее старая прошивка или обновление по Bluetooth
-          выключено в настройках. Тогда один раз прошейте его по USB-кабелю.</p>
-        <div class="actions">
-          <button type="button" id="flash-ble" class="button button-primary" disabled>Прошить по Bluetooth</button>
-        </div>
-      </div>
-
-      <div id="status" class="status" role="status" aria-live="polite" hidden></div>
-      <div id="progress-box" class="progress" hidden>
-        <progress id="progress" max="100" value="0"></progress>
-        <span id="progress-text">0%</span>
-      </div>
-
-      <details class="more">
-        <summary>Журнал</summary>
-        <pre id="log" class="log"></pre>
-      </details>
-      <details class="more" id="recovery">
-        <summary>Дисплей не включается после неудачной прошивки</summary>
-        <div class="recovery">
-          <p>Если прошивка прервалась на середине — разрядилась батарея, отключился кабель, телефон ушёл далеко, —
-            старая версия уже стёрта, а новая не дописана. Плата при этом не сломана: загрузчик прошивка не затрагивает,
-            недописанную версию он не запустит и ждёт новую. Экран всё это время тёмный.</p>
-          <ol class="steps">
-            <li>Подключите дисплей к компьютеру USB-кабелем и откройте эту страницу в Chrome, Edge или Яндекс Браузере.</li>
-            <li>На вкладке «USB-кабель» нажмите «Прошить» и выберите устройство. В списке оно может называться
-              не IMBA TV, а по названию платы — это загрузчик.</li>
-            <li>Если устройство не появилось сразу, подождите пару минут: после обрыва по Bluetooth загрузчик
-              сначала ждёт телефон и только потом включает USB.</li>
+        <div id="panel-usb" class="panel" role="tabpanel" aria-labelledby="tab-usb">
+          <p id="usb-unsupported" class="callout callout-caution" data-label="Внимание" hidden>
+            Этот браузер не умеет работать с USB-портами. Нужен Chrome, Edge, Яндекс Браузер или Opera на компьютере.
+          </p>
+          <ol class="proc proc-3">
+            <li>Подключите IMBA TV к компьютеру USB-кабелем с передачей данных. Дисплей включится сам.</li>
+            <li>Нажмите «Прошить» и выберите в списке устройство <b>IMBA TV</b>.</li>
+            <li>Плата перезагрузится в режим загрузчика. Если браузер попросит, выберите новое устройство ещё раз.</li>
           </ol>
-          <p>Иногда на компьютере появляется и USB-диск — тогда можно просто скопировать на него файл <code>.uf2</code>
-            из раздела «Скачать прошивку».</p>
-          <p>Пока дисплей ждёт прошивку, он не следит за зарядом батареи. Не оставляйте его так надолго —
-            прошейте сразу или поставьте на зарядку.</p>
-          <p class="muted">Если дисплей не появляется на компьютере даже через несколько минут, переведите плату
-            в загрузчик двойным замыканием RST на GND — для этого придётся открыть корпус.</p>
+          <div class="actions">
+            <button type="button" id="flash" class="button button-primary" disabled>Прошить</button>
+            <button type="button" id="pick-bootloader" class="button button-primary" hidden>Выбрать порт загрузчика</button>
+            <button type="button" id="cancel" class="button" hidden>Отмена</button>
+          </div>
         </div>
-      </details>
-      <details class="more" id="usb-advanced">
-        <summary>Дополнительно</summary>
-        <label class="checkbox">
-          <input type="checkbox" id="all-ports">
-          Показывать все последовательные порты, а не только платы Adafruit nRF52
-        </label>
-      </details>
+
+        <div id="panel-ble" class="panel" role="tabpanel" aria-labelledby="tab-ble" hidden>
+          <p id="ble-unsupported" class="callout callout-caution" data-label="Внимание" hidden></p>
+          <div class="callout callout-caution" data-label="Внимание">
+            <p>Нужно не меньше 30% заряда. Если батарея сядет посреди прошивки, дисплей не включится, пока его не прошить заново.</p>
+          </div>
+          <ol class="proc proc-3">
+            <li>Закройте LoEUC на телефоне, чтобы он не занял подключение к дисплею.</li>
+            <li>Выключите дисплей. Включите его кнопкой и не отпускайте: после логотипа появится полоса.
+              Держите, пока она не заполнится и не появится «Обновление по Bluetooth», это около 4&nbsp;секунд (рис.&nbsp;2).</li>
+            <li>Нажмите «Прошить по Bluetooth» и выберите <b>IMBA TV</b>. Держите телефон рядом с дисплеем.</li>
+          </ol>
+
+          <figure class="fig fig-timing">
+            <div class="timing" role="img" aria-label="Кнопку держат с момента включения: секунду виден логотип, затем три секунды заполняется полоса, после этого появляется надпись «Обновление по Bluetooth».">
+              <span class="t-label">Кнопка</span>
+              <span class="t-press">держать</span>
+              <span class="t-release">отпустить</span>
+              <span class="t-label">Экран</span>
+              <span class="t-seg t-logo">Логотип</span>
+              <span class="t-seg t-bar">Полоса заполняется</span>
+              <span class="t-seg t-done">Обновление по&nbsp;Bluetooth</span>
+              <span class="t-axis"><span>0</span><span>1</span><span>2</span><span>3</span><span>4 с</span></span>
+            </div>
+            <figcaption><b>Рис. 2.</b> Кнопку держат от включения до надписи «Обновление по Bluetooth»</figcaption>
+          </figure>
+
+          <p class="note"><b>Примечание.</b> Если надпись не появляется, см. <a href="#trouble">«Неисправности»</a>.</p>
+          <div class="actions">
+            <button type="button" id="flash-ble" class="button button-primary" disabled>Прошить по Bluetooth</button>
+          </div>
+        </div>
+
+        <div id="work" class="work" hidden>
+          <div class="work-head">
+            <span class="work-title">Карта работ</span>
+            <span id="work-target" class="work-target"></span>
+          </div>
+          <ol id="work-list" class="work-list"></ol>
+          <div id="progress-box" class="progress" hidden>
+            <div class="gauge">
+              <progress id="progress" max="100" value="0" aria-labelledby="progress-text"></progress>
+            </div>
+            <div class="readout">
+              <span id="progress-text">0%</span>
+              <span id="progress-bytes" class="bytes"></span>
+            </div>
+          </div>
+        </div>
+
+        <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+
+        <details class="more">
+          <summary>Журнал<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <pre id="log" class="log"></pre>
+        </details>
+        <details class="more" id="usb-advanced">
+          <summary>Дополнительно<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <label class="checkbox">
+            <input type="checkbox" id="all-ports">
+            Показывать все последовательные порты, а не только платы Adafruit nRF52
+          </label>
+        </details>
+      </div>
     </section>
 
-    <section class="card" id="manual" aria-labelledby="manual-title">
-      <h2 id="manual-title">Скачать прошивку</h2>
-      <p>Файлы выбранной версии. В файл «с настройками» попадут значения из шага 2.</p>
-      <div id="downloads" class="downloads"><span class="muted">Выберите версию выше</span></div>
+    <section class="op op-plain" id="trouble" aria-labelledby="trouble-title" data-guide="Неисправности">
+      <div class="op-num op-num-icon" aria-hidden="true"><svg class="icon"><use href="#i-alert"/></svg></div>
+      <div class="op-body">
+        <h2 id="trouble-title">Неисправности</h2>
+        <p class="op-lede">Признак, причина и что делать.</p>
 
-      <details class="more">
-        <summary>Файл .uf2 через USB-диск</summary>
-        <ol class="steps">
-          <li>Переведите плату в режим загрузчика: дважды быстро замкните RST на GND.
-            На компьютере появится USB-диск.</li>
-          <li>Скопируйте на этот диск файл <code>.uf2</code> — плата прошьётся и перезагрузится сама.</li>
-        </ol>
-      </details>
-      <details class="more">
-        <summary>adafruit-nrfutil</summary>
-        <p class="muted"><code>adafruit-nrfutil dfu serial --singlebank -b 115200 -p ПОРТ -pkg ФАЙЛ.zip</code></p>
-      </details>
+        <details class="fault" id="recovery">
+          <summary><span>Дисплей не включается после неудачной прошивки</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <div class="fault-body">
+            <h3>Причина</h3>
+            <p>Прошивка прервалась на середине: разрядилась батарея, отключился кабель или телефон ушёл далеко.
+              Старая версия уже стёрта, а новая не дописана. Плата при этом не сломана: загрузчик прошивка не затрагивает,
+              недописанную версию он не запустит и ждёт новую. Экран всё это время тёмный.</p>
+            <h3>Устранение</h3>
+            <ol class="proc">
+              <li>Подключите дисплей к компьютеру USB-кабелем и откройте эту страницу в Chrome, Edge или Яндекс Браузере.</li>
+              <li>В способе А нажмите «Прошить» и выберите устройство. В списке оно может называться
+                не IMBA TV, а по названию платы: это загрузчик.</li>
+              <li>Если устройство не появилось сразу, подождите пару минут: после обрыва по Bluetooth загрузчик
+                сначала ждёт телефон и только потом включает USB.</li>
+            </ol>
+            <p>Иногда на компьютере появляется и USB-диск. Тогда можно просто скопировать на него файл <code>.uf2</code>
+              из приложения А.</p>
+            <div class="callout callout-caution" data-label="Внимание">
+              <p>Пока дисплей ждёт прошивку, он не следит за зарядом батареи. Не оставляйте его так надолго:
+                прошейте сразу или поставьте на зарядку.</p>
+            </div>
+            <p class="note"><b>Примечание.</b> Если дисплей не появляется на компьютере даже через несколько минут,
+              переведите плату в загрузчик двойным замыканием RST на GND. Для этого придётся открыть корпус.</p>
+          </div>
+        </details>
+
+        <details class="fault">
+          <summary><span>Надпись «Обновление по Bluetooth» не появляется</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <div class="fault-body">
+            <h3>Причина</h3>
+            <p>На дисплее старая прошивка без обновления по Bluetooth, или оно выключено в настройках
+              (группа «Обновление по Bluetooth»). Если вместо надписи появилось «Зарядите дисплей», заряда меньше 30%.</p>
+            <h3>Устранение</h3>
+            <p>Один раз прошейте дисплей по USB-кабелю, способом А. Если на экране «Зарядите дисплей», зарядите его до 30%.</p>
+          </div>
+        </details>
+
+        <details class="fault">
+          <summary><span>Платы нет в списке портов</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <div class="fault-body">
+            <h3>Причина</h3>
+            <p>Кабель только заряжает и не передаёт данные, или плата определяется не как Adafruit nRF52.</p>
+            <h3>Устранение</h3>
+            <p>Возьмите кабель с передачей данных. Если не помогло, включите «Показывать все последовательные порты»
+              в разделе «Дополнительно» под кнопкой «Прошить».</p>
+          </div>
+        </details>
+      </div>
     </section>
 
-    <footer>
-      <a id="repo-link" href="https://github.com/GlazovYuri/IMBA_TV" target="_blank" rel="noopener">Исходный код и все релизы на GitHub</a>
+    <section class="op op-plain" id="manual" aria-labelledby="manual-title" data-guide="Приложение А">
+      <div class="op-num" aria-hidden="true">А</div>
+      <div class="op-body">
+        <h2 id="manual-title">Приложение А. Файлы прошивки</h2>
+        <p class="op-lede">Файлы выбранной версии. В файл «с настройками» попадут значения из операции 2.</p>
+        <div id="downloads" class="downloads"><span class="muted">Выберите версию выше</span></div>
+
+        <details class="more">
+          <summary>Файл .uf2 через USB-диск<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <ol class="proc">
+            <li>Переведите плату в режим загрузчика: дважды быстро замкните RST на GND.
+              На компьютере появится USB-диск.</li>
+            <li>Скопируйте на этот диск файл <code>.uf2</code>: плата прошьётся и перезагрузится сама.</li>
+          </ol>
+        </details>
+        <details class="more">
+          <summary>adafruit-nrfutil<svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+          <pre class="cmd"><code>adafruit-nrfutil dfu serial --singlebank -b 115200 -p ПОРТ -pkg ФАЙЛ.zip</code></pre>
+        </details>
+      </div>
+    </section>
+
+    <footer class="colophon">
+      <div class="colophon-main">
+        <span class="colophon-name">IMBA TV</span>
+        <ul class="colophon-links">
+          <li><a href="https://t.me/IMBA_project" target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-telegram"/></svg>Telegram проекта: @IMBA_project</a></li>
+          <li><a id="repo-link" href="https://github.com/GlazovYuri/IMBA_TV" target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg>Исходный код и все релизы на GitHub</a></li>
+        </ul>
+      </div>
+      <p class="colophon-credit">Сайт сделали <a href="https://t.me/glazovy" target="_blank" rel="noopener">@glazovy</a> × Claude</p>
     </footer>
   </main>
 </body>

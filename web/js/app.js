@@ -6,7 +6,7 @@ import { findConfig, readValues, defaultValues, checkValue, isVisible, applyValu
 // USB VID Adafruit: и прошивка, и загрузчик платы (см. boards/boards.txt).
 // PID приложения — 0x80xx, загрузчика — 0x00xx.
 const ADAFRUIT_VID = 0x239a;
-const VISIBLE_VERSIONS = 5;
+const VISIBLE_VERSIONS = 3;
 const SETTINGS_KEY = 'imba-tv-settings';
 const METHOD_KEY = 'imba-tv-method';
 
@@ -15,7 +15,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const state = {
   versions: [],
-  showAll: false,
+  catalogOpen: false, // раскрыт каталог всех версий
   selected: null, // { kind: 'release', version } | { kind: 'own', file }
   firmware: null, // Promise<{ bin, dat, config }>
   firmwareFailed: false,
@@ -57,7 +57,67 @@ function setProgress(done, total) {
   box.hidden = false;
   $('progress').value = pct;
   $('progress-text').textContent = `${pct}%`;
+  $('progress-bytes').textContent = `${done.toLocaleString('ru-RU')} из ${total.toLocaleString('ru-RU')} байт`;
 }
+
+// ---------- Карта работ: этапы прошивки отмечаются по мере выполнения ----------
+
+const WORK_STEPS = {
+  usb: [
+    ['port', 'Порт выбран'],
+    ['boot', 'Перезагрузка в загрузчик'],
+    ['write', 'Запись прошивки'],
+    ['apply', 'Загрузчик применяет прошивку'],
+  ],
+  ble: [
+    ['port', 'Подключение к дисплею'],
+    ['boot', 'Перезагрузка в загрузчик'],
+    ['write', 'Передача по Bluetooth'],
+    ['apply', 'Загрузчик применяет прошивку'],
+  ],
+};
+
+const work = {
+  start(method, target) {
+    $('work-target').textContent = `${target} → IMBA TV`;
+    $('work-list').replaceChildren(...WORK_STEPS[method].map(([id, label]) => {
+      const li = document.createElement('li');
+      li.dataset.step = id;
+      li.dataset.state = 'todo';
+      li.append(textEl('span', 'w-box', ''), textEl('span', 'w-label', label), textEl('span', 'w-time', ''));
+      return li;
+    }));
+    $('work').hidden = false;
+  },
+  item(id) {
+    return $('work-list').querySelector(`[data-step="${id}"]`);
+  },
+  mark(li, state, note) {
+    li.dataset.state = state;
+    li.querySelector('.w-time').textContent = note ?? new Date().toLocaleTimeString('ru-RU');
+  },
+  // текущий этап завершён, следующий id начат
+  step(id) {
+    this.finish();
+    const li = this.item(id);
+    li.dataset.state = 'active';
+    li.querySelector('.w-time').textContent = '';
+  },
+  skip(id) {
+    this.mark(this.item(id), 'skip', 'не нужно');
+  },
+  finish() {
+    const li = $('work-list').querySelector('[data-state="active"]');
+    if (li) this.mark(li, 'done');
+  },
+  fail() {
+    const li = $('work-list').querySelector('[data-state="active"]');
+    if (li) this.mark(li, 'fail');
+  },
+  hide() {
+    $('work').hidden = true;
+  },
+};
 
 function formatSize(bytes) {
   return `${(bytes / 1024).toFixed(1).replace('.', ',')} КБ`;
@@ -65,7 +125,7 @@ function formatSize(bytes) {
 
 function formatDate(iso) {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 // ---------- Выбор прошивки ----------
@@ -77,21 +137,22 @@ function renderVersions() {
   if (!state.versions.length) {
     const p = document.createElement('p');
     p.className = 'muted';
-    p.textContent = 'Опубликованных версий пока нет — можно прошить свой файл.';
+    p.textContent = 'Опубликованных версий пока нет. Можно прошить свой файл.';
     box.append(p);
-    $('show-all').hidden = true;
+    $('catalog-bar').hidden = $('catalog').hidden = true;
     return;
   }
 
-  const list = state.showAll ? state.versions : state.versions.slice(0, VISIBLE_VERSIONS);
-  const selectedTag = state.selected?.kind === 'release' ? state.selected.version.tag : null;
-  if (selectedTag && !list.some((v) => v.tag === selectedTag)) {
-    list.push(state.versions.find((v) => v.tag === selectedTag));
-  }
+  // в списке только последние версии; старая выбранная закрепляется последней строкой
+  const list = state.versions.slice(0, VISIBLE_VERSIONS);
+  const selectedTag = selectedRelease()?.tag ?? null;
+  const pinned = selectedTag && !list.some((v) => v.tag === selectedTag);
+  if (pinned) list.push(state.versions.find((v) => v.tag === selectedTag));
 
   for (const v of list) {
     const label = document.createElement('label');
     label.className = 'option';
+    if (pinned && v.tag === selectedTag) label.classList.add('option-pinned');
 
     const input = document.createElement('input');
     input.type = 'radio';
@@ -102,23 +163,87 @@ function renderVersions() {
 
     const body = document.createElement('span');
     body.className = 'option-body';
-    const title = document.createElement('span');
-    title.className = 'option-title';
-    title.textContent = v.tag;
-    if (v === state.versions[0]) title.append(badge('последняя'));
-    if (v.prerelease) title.append(badge('тестовая', 'badge-pre'));
-    const meta = document.createElement('span');
-    meta.className = 'option-meta';
-    meta.textContent = formatDate(v.date);
-    body.append(title, meta);
+    const notes = textEl('span', 'option-notes', noteSummary(v));
+    notes.title = notes.textContent;
+    body.append(versionTitle(v, 'option-title'), textEl('span', 'option-meta', formatDate(v.date)), notes);
 
     label.append(input, body);
     box.append(label);
   }
 
-  const hidden = state.versions.length - VISIBLE_VERSIONS;
-  $('show-all').hidden = state.showAll || hidden <= 0;
-  $('show-all').textContent = `Показать все версии (${state.versions.length})`;
+  const many = state.versions.length > VISIBLE_VERSIONS;
+  $('catalog-bar').hidden = !many;
+  $('show-all-text').textContent = `Все версии: ${state.versions.length}`;
+  $('show-all').setAttribute('aria-expanded', String(many && state.catalogOpen));
+  $('catalog').hidden = !many || !state.catalogOpen;
+  if (many && state.catalogOpen) renderCatalog();
+}
+
+function selectedRelease() {
+  return state.selected?.kind === 'release' ? state.selected.version : null;
+}
+
+// первая строка описания релиза: у каждой версии видно, что в ней нового
+function noteSummary(v) {
+  return (v.notes ?? '').split('\n').map((s) => s.replace(/^[-*]\s*/, '').trim()).find(Boolean) ?? '';
+}
+
+function versionTitle(v, className) {
+  const title = textEl('span', className, v.tag);
+  if (v === state.versions[0]) title.append(badge('последняя'));
+  if (v.prerelease) title.append(badge('тестовая', 'badge-pre'));
+  return title;
+}
+
+// Каталог всех версий: поиск по номеру и описанию, группы по сериям (v0.5.x, v0.4.x…)
+function seriesOf(tag) {
+  const m = /^v?(\d+)\.(\d+)/.exec(tag);
+  return m ? `${m[1]}.${m[2]}` : null;
+}
+
+function renderCatalog() {
+  const query = $('version-search').value.trim().toLowerCase();
+  const selectedTag = selectedRelease()?.tag;
+  const groups = new Map();
+  for (const v of state.versions) {
+    if (query && !`${v.tag}\n${v.notes ?? ''}`.toLowerCase().includes(query)) continue;
+    const series = seriesOf(v.tag);
+    if (!groups.has(series)) groups.set(series, []);
+    groups.get(series).push(v);
+  }
+
+  const sections = [...groups].map(([series, versions]) => {
+    const section = document.createElement('section');
+    section.className = 'catalog-group';
+    const head = textEl('h3', 'catalog-series', series ? `Серия ${series}` : 'Другие версии');
+    head.append(textEl('span', 'catalog-count', String(versions.length)));
+    section.append(head);
+    for (const v of versions) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'catalog-row';
+      row.disabled = state.busy;
+      if (v.tag === selectedTag) row.setAttribute('aria-current', 'true');
+      const notes = textEl('span', 'catalog-notes', noteSummary(v));
+      row.append(versionTitle(v, 'catalog-tag'), textEl('span', 'catalog-date', formatDate(v.date)), notes);
+      row.addEventListener('click', () => {
+        state.catalogOpen = false;
+        select({ kind: 'release', version: v });
+        renderVersions();
+        $('versions').querySelector('input:checked')?.focus();
+      });
+      section.append(row);
+    }
+    return section;
+  });
+  $('catalog-list').replaceChildren(...sections);
+  $('catalog-empty').hidden = sections.length > 0;
+  $('catalog-empty').textContent = `Версий по запросу «${$('version-search').value.trim()}» нет.`;
+}
+
+function toggleCatalog(open = !state.catalogOpen) {
+  state.catalogOpen = open;
+  renderVersions();
 }
 
 function badge(text, extra = '') {
@@ -154,6 +279,8 @@ function select(selection) {
   $('own-option').querySelector('input').checked = own;
   $('dropzone').hidden = !own;
   if (!own) history.replaceState(null, '', `#${encodeURIComponent(selection.version.tag)}`);
+  $('runhead-rev').textContent = own ? (selection.file?.name ?? 'свой файл') : selection.version.tag;
+  if (state.catalogOpen) renderCatalog();
 
   state.firmwareFailed = false;
   state.fw = null;
@@ -196,7 +323,7 @@ async function fetchRelease(version) {
   try {
     res = await fetch(version.files.zip);
   } catch {
-    throw new FirmwareError('Не удалось скачать прошивку — проверьте подключение к интернету');
+    throw new FirmwareError('Не удалось скачать прошивку. Проверьте подключение к интернету');
   }
   if (!res.ok) throw new FirmwareError(`Не удалось скачать прошивку (HTTP ${res.status})`);
   return prepareFirmware(version.files.zip, await res.arrayBuffer());
@@ -305,7 +432,7 @@ function renderConfig(values) {
   state.invalid.clear();
   const cfg = state.fw?.config;
 
-  let empty = 'Выберите прошивку — здесь появятся её настройки.';
+  let empty = 'Выберите прошивку, и здесь появятся её настройки.';
   if (state.firmwareFailed) empty = 'Настройки появятся, когда прошивка пройдёт проверку.';
   else if (state.firmware && !state.fw) empty = 'Загружаю настройки прошивки…';
   else if (state.fw) empty = 'Эта прошивка не поддерживает настройку и будет записана как есть.';
@@ -507,6 +634,10 @@ function describeSettings(fw, values) {
   }).join('; ');
 }
 
+function selectedName() {
+  return state.selected.kind === 'own' ? state.selected.file.name : state.selected.version.tag;
+}
+
 function setOwnFile(file) {
   $('file-name').hidden = false;
   $('file-name').textContent = file.name;
@@ -523,7 +654,7 @@ function updateButtons() {
 
 function setBusy(busy) {
   state.busy = busy;
-  document.querySelectorAll('input[name="firmware"], #file-pick, #config-form input, #config-form select, #config-reset, [role="tab"]')
+  document.querySelectorAll('input[name="firmware"], #file-pick, #show-all, .catalog-row, #config-form input, #config-form select, #config-reset, [role="tab"]')
     .forEach((el) => { el.disabled = busy; });
   updateButtons();
 }
@@ -588,7 +719,7 @@ function obtainBootloaderPort(oldPort) {
 }
 
 const ERASED_NOTE = 'Старая прошивка уже стёрта, поэтому дисплей не будет включаться, пока его не прошить заново. ' +
-  'Это не опасно: загрузчик цел и ждёт новую прошивку — см. «Дисплей не включается после неудачной прошивки» ниже.';
+  'Это не опасно: загрузчик цел и ждёт новую прошивку. Что делать, см. «Дисплей не включается после неудачной прошивки» в разделе «Неисправности».';
 
 function showRecovery() {
   $('recovery').open = true;
@@ -599,8 +730,8 @@ function explainBle(e, stage) {
   if (e instanceof FirmwareError) return e.message;
   if (e.code === 'no-dfu') {
     return 'На дисплее не включён режим обновления по Bluetooth. Выключите дисплей и включите его кнопкой, не отпуская её ' +
-      'после логотипа, пока не появится «Обновление по Bluetooth» (около 4 секунд). Если появилось «Зарядите дисплей» — зарядите его до 30%. ' +
-      'Если надписи нет совсем — один раз прошейте дисплей по USB-кабелю.';
+      'после логотипа, пока не появится «Обновление по Bluetooth» (около 4 секунд). Если появилось «Зарядите дисплей», зарядите его до 30%. ' +
+      'Если надписи нет совсем, один раз прошейте дисплей по USB-кабелю.';
   }
   if (stage === 'transfer') {
     showRecovery();
@@ -644,22 +775,29 @@ async function flash() {
   setBusy(true);
   $('log').textContent = '';
   setProgress(null);
+  work.start('usb', selectedName());
+  work.step('port');
   let dfu = null;
 
   try {
     const fw = await firmwarePromise;
     const image = buildImage(fw);
-    log(`Прошивка: ${state.selected.kind === 'own' ? state.selected.file.name : state.selected.version.tag}, ${image.bin.length} байт`);
+    log(`Прошивка: ${selectedName()}, ${image.bin.length} байт`);
     if (fw.config) log(`Настройки: ${describeSettings(fw, image.values)}`);
     log(`Выбран порт: ${describePort(port)}`);
 
     if (!isBootloader(port)) {
+      work.step('boot');
       setStatus('Перезагружаю плату в режим загрузчика…', 'wait');
       log('Сброс через 1200 бод');
       await touch1200(port);
       port = await obtainBootloaderPort(port);
+    } else {
+      work.finish();
+      work.skip('boot');
     }
 
+    work.step('write');
     setStatus('Записываю прошивку… Не отключайте плату.', 'wait');
     setProgress(0, image.bin.length);
     dfu = new SerialDfu(port, { log, onProgress: setProgress });
@@ -670,11 +808,14 @@ async function flash() {
       await dfu.close();
     }
 
+    work.step('apply');
     setStatus('Загрузчик применяет прошивку…', 'wait');
     await sleep(activateWaitTime(image.bin.length));
+    work.finish();
     log('Готово');
-    setStatus('Готово! Прошивка записана, плата перезагрузилась. Если экран не включился, нажмите и удерживайте кнопку.', 'ok');
+    setStatus('Прошивка записана, плата перезагрузилась. Если экран не включился, нажмите и удерживайте кнопку.', 'ok');
   } catch (e) {
+    work.fail();
     log(`Ошибка: ${e.message}`);
     if (dfu?.started) {
       showRecovery();
@@ -698,7 +839,7 @@ async function flashBle() {
     device = await requestDfuDevice();
   } catch (e) {
     if (e.name === 'NotFoundError') {
-      setStatus('Дисплей не выбран. Если его нет в списке, включите на нём режим обновления по Bluetooth (шаг 2) и закройте LoEUC.');
+      setStatus('Дисплей не выбран. Если его нет в списке, включите на нём режим обновления по Bluetooth (шаг 3.2) и закройте LoEUC.');
     } else {
       setStatus(`Bluetooth недоступен: ${e.message}`, 'error');
     }
@@ -708,32 +849,42 @@ async function flashBle() {
   setBusy(true);
   $('log').textContent = '';
   setProgress(null);
+  work.start('ble', selectedName());
   const dfu = new BleDfu(device, { log, onProgress: setProgress });
   let stage = 'connect'; // connect → jump (плата перезагружается в загрузчик) → transfer (dfu.started)
 
   try {
     const fw = await firmwarePromise;
     const image = buildImage(fw);
-    log(`Прошивка: ${state.selected.kind === 'own' ? state.selected.file.name : state.selected.version.tag}, ${image.bin.length} байт`);
+    log(`Прошивка: ${selectedName()}, ${image.bin.length} байт`);
     if (fw.config) log(`Настройки: ${describeSettings(fw, image.values)}`);
 
+    work.step('port');
     setStatus('Подключаюсь к дисплею…', 'wait');
     await dfu.connect();
     if (dfu.inApplication) {
+      work.step('boot');
       setStatus('Перезагружаю дисплей в режим загрузчика…', 'wait');
       stage = 'jump';
       await dfu.enterBootloader();
+    } else {
+      work.finish();
+      work.skip('boot');
     }
 
+    work.step('write');
     setStatus('Передаю прошивку по Bluetooth… Держите телефон рядом с дисплеем и не закрывайте страницу.', 'wait');
     setProgress(0, image.bin.length);
     await dfu.flash(image.bin, image.dat);
 
+    work.step('apply');
     setStatus('Загрузчик применяет прошивку…', 'wait');
     await sleep(activateWaitTime(image.bin.length));
+    work.finish();
     log('Готово');
-    setStatus('Готово! Прошивка записана, дисплей перезагрузился. Если экран не включился, нажмите и удерживайте кнопку.', 'ok');
+    setStatus('Прошивка записана, дисплей перезагрузился. Если экран не включился, нажмите и удерживайте кнопку.', 'ok');
   } catch (e) {
+    work.fail();
     log(`Ошибка: ${e.message}`);
     setStatus(explainBle(e, dfu.started ? 'transfer' : stage), 'error');
   } finally {
@@ -752,7 +903,11 @@ function selectMethod(method) {
     $(`panel-${m}`).hidden = m !== method;
   }
   $('usb-advanced').hidden = method !== 'usb';
-  if (!state.busy) setStatus('');
+  if (!state.busy) {
+    setStatus('');
+    work.hide();
+    setProgress(null);
+  }
   try {
     localStorage.setItem(METHOD_KEY, method);
   } catch {
@@ -770,14 +925,14 @@ function initMethods() {
 
   if (!hasSerial) {
     $('usb-unsupported').hidden = false;
-    if (isMobile) $('usb-unsupported').textContent = 'На телефоне браузер не умеет работать с USB-портами — прошейте дисплей по Bluetooth.';
+    if (isMobile) $('usb-unsupported').textContent = 'На телефоне браузер не умеет работать с USB-портами. Прошейте дисплей по Bluetooth.';
   }
   if (!hasBluetooth) {
     const note = $('ble-unsupported');
     note.hidden = false;
     if (isIOS) {
       note.append('На iPhone Safari и другие браузеры не умеют работать с Bluetooth. Откройте эту страницу в бесплатном браузере ',
-        link('Bluefy', 'https://apps.apple.com/app/id1492822055'), ' — в нём прошивка по Bluetooth работает.');
+        link('Bluefy', 'https://apps.apple.com/app/id1492822055'), ': в нём прошивка по Bluetooth работает.');
     } else {
       note.textContent = 'Этот браузер не умеет работать с Bluetooth. Нужен Chrome (на компьютере или Android), Edge или Яндекс Браузер.';
     }
@@ -796,7 +951,7 @@ function initMethods() {
       note.append('На iPhone прошить дисплей можно по Bluetooth: откройте эту страницу в бесплатном браузере ',
         link('Bluefy', 'https://apps.apple.com/app/id1492822055'), '.');
     } else {
-      note.append('Этот браузер не умеет работать ни с USB, ни с Bluetooth. Откройте страницу в Chrome, Edge или Яндекс Браузере — или ',
+      note.append('Этот браузер не умеет работать ни с USB, ни с Bluetooth. Откройте страницу в Chrome, Edge или Яндекс Браузере. Или ',
         link('скачайте файл', '#manual'), ' и прошейте вручную.');
     }
   }
@@ -827,7 +982,13 @@ function initMethods() {
 function init() {
   initMethods();
 
-  $('show-all').addEventListener('click', () => { state.showAll = true; renderVersions(); });
+  $('show-all').addEventListener('click', () => toggleCatalog());
+  $('version-search').addEventListener('input', renderCatalog);
+  $('catalog').addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    toggleCatalog(false);
+    $('show-all').focus();
+  });
   $('own-option').querySelector('input').addEventListener('change', () => {
     select({ kind: 'own', file: state.selected?.kind === 'own' ? state.selected.file : null });
     if (!state.selected.file) $('file-input').click();
@@ -839,8 +1000,8 @@ function init() {
     e.target.value = '';
   });
 
-  // Файл можно бросить на всю карточку выбора
-  const zone = $('step1-title').closest('.card');
+  // Файл можно бросить на всю операцию выбора
+  const zone = $('step1-title').closest('section');
   zone.addEventListener('dragover', (e) => {
     if (state.busy) return;
     e.preventDefault();
@@ -869,6 +1030,18 @@ function init() {
   window.addEventListener('beforeunload', (e) => {
     if (state.busy) e.preventDefault();
   });
+
+  // Колонтитул называет раздел, который сейчас под ним
+  const guides = [...document.querySelectorAll('[data-guide]')];
+  const updateGuide = () => {
+    const line = document.querySelector('.runhead').getBoundingClientRect().bottom + 24;
+    // последний раздел короче экрана и до линии колонтитула не доезжает: в конце страницы берём его
+    const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+    const current = atEnd ? guides.at(-1) : guides.filter((s) => s.getBoundingClientRect().top <= line).pop() ?? guides[0];
+    $('runhead-section').textContent = current.dataset.guide;
+  };
+  window.addEventListener('scroll', updateGuide, { passive: true });
+  updateGuide();
 
   updateButtons();
   loadVersions();

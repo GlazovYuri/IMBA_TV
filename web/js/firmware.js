@@ -134,7 +134,7 @@ function findFile(files, name) {
 export async function parseDfuZip(buffer) {
   const files = await readZip(buffer);
   const manifestRaw = findFile(files, 'manifest.json');
-  if (!manifestRaw) throw new FirmwareError('В архиве нет manifest.json — это не DFU-пакет');
+  if (!manifestRaw) throw new FirmwareError('В архиве нет manifest.json: это не DFU-пакет');
 
   let manifest;
   try {
@@ -144,7 +144,7 @@ export async function parseDfuZip(buffer) {
   }
   if (!manifest) throw new FirmwareError('Не удалось прочитать manifest.json');
   if (manifest.softdevice || manifest.bootloader || manifest.softdevice_bootloader) {
-    throw new FirmwareError('Пакет обновляет SoftDevice или загрузчик — через сайт можно прошить только приложение');
+    throw new FirmwareError('Пакет обновляет SoftDevice или загрузчик, а через сайт можно прошить только приложение');
   }
   const app = manifest.application;
   if (!app) throw new FirmwareError('В DFU-пакете нет прошивки приложения');
@@ -266,7 +266,7 @@ function validate({ bin, dat }) {
   }
   if (dat.length < 12) throw new FirmwareError('Init-пакет в DFU-архиве слишком короткий');
   const datCrc = dat[dat.length - 2] | (dat[dat.length - 1] << 8);
-  if (datCrc !== crc16(bin)) throw new FirmwareError('Контрольная сумма прошивки не совпадает — файл повреждён');
+  if (datCrc !== crc16(bin)) throw new FirmwareError('Контрольная сумма прошивки не совпадает: файл повреждён');
   if (!checkVectorTable(bin)) {
     throw new FirmwareError('Файл не похож на прошивку nRF52840 для SoftDevice S140 6.1.1');
   }
