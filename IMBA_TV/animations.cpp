@@ -1,6 +1,7 @@
 #include "animations.h"
 #include "display.h"
 #include "config.h"
+#include "utils.h"
 #include "GyverOLED.h"
 #include "logo.h"
 #include <math.h>
@@ -583,12 +584,8 @@ static uint32_t introSeed()
   return seed;
 }
 
-void displayPlayIntroNum(int anim, uint32_t seed, uint8_t dev_charge, bool is_charging, euc_data_t& data)
+static void introAnimation(int anim, uint8_t dev_charge, bool is_charging, euc_data_t& data)
 {
-  displayDrawLogo();
-  delay(intro_logo_hold);
-
-  rnd_state = seed;
   switch(anim)
   {
     case 0:  introWave(dev_charge, is_charging, data); break;
@@ -597,19 +594,44 @@ void displayPlayIntroNum(int anim, uint32_t seed, uint8_t dev_charge, bool is_ch
   }
 }
 
-void displayPlayIntro(uint8_t dev_charge, bool is_charging, euc_data_t& data)
+void displayPlayIntroNum(int anim, uint32_t seed, uint8_t dev_charge, bool is_charging, euc_data_t& data)
+{
+  displayDrawLogo();
+  delay(intro_logo_hold);
+
+  rnd_state = seed;
+  introAnimation(anim, dev_charge, is_charging, data);
+}
+
+bool displayIntroBegin(bool watch_button, uint8_t dev_charge, bool is_charging, euc_data_t& data)
+{
+  // без заставки сразу интерфейс и ждём, только пока держат кнопку
+  bool no_intro = (config().intro == CONFIG_INTRO_NONE);
+  if(no_intro) displayDrawIface(dev_charge, is_charging, data);
+  else displayDrawLogo();
+
+  bool held = watch_button;
+  uint32_t start = millis();
+  while(millis() - start < intro_logo_hold)
+  {
+    if(!buttonPressed())
+    {
+      held = false;
+      if(no_intro) break;
+    }
+    delay(10);
+  }
+  return held;
+}
+
+void displayIntroFinish(uint8_t dev_charge, bool is_charging, euc_data_t& data)
 {
   uint8_t intro = config().intro;
-  if(intro == CONFIG_INTRO_NONE) return;
-  if(intro == CONFIG_INTRO_LOGO)
-  {
-    displayDrawLogo();
-    delay(intro_logo_hold);
-    return;
-  }
+  if(intro == CONFIG_INTRO_NONE || intro == CONFIG_INTRO_LOGO) return;
 
   uint32_t seed = introSeed();
-  // волна, разрушение, взрыв - в порядке displayPlayIntroNum
+  // волна, разрушение, взрыв - в порядке introAnimation
   int anim = (intro == CONFIG_INTRO_RANDOM) ? (seed >> 16) % 3 : intro - CONFIG_INTRO_WAVE;
-  displayPlayIntroNum(anim, seed, dev_charge, is_charging, data);
+  rnd_state = seed;
+  introAnimation(anim, dev_charge, is_charging, data);
 }
