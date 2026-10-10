@@ -473,8 +473,21 @@ function renderConfig(values) {
     fields.className = 'fields';
     // section начинает подраздел группы; подпункты собираются в блок под родительской галочкой
     let sub = null;
+    // Clawd сидит на черте перед следующим подразделом (или в конце группы), вне дерева подпунктов
+    let perch = null;
+    const placePerch = () => {
+      if (perch) fields.append(perch);
+      perch = null;
+    };
     for (const f of group.fields) {
-      if (f.section) fields.append(textEl('h4', 'fields-section', f.section));
+      if (f.widget === 'clawd') {
+        perch = renderClawd(f);
+        continue;
+      }
+      if (f.section) {
+        placePerch();
+        fields.append(textEl('h4', 'fields-section', f.section));
+      }
       if (!f.subitem) {
         sub = null;
         fields.append(renderField(f, group));
@@ -489,6 +502,7 @@ function renderConfig(values) {
       }
       sub.append(renderField(f, group));
     }
+    placePerch();
     details.append(summary, fields);
     form.append(details);
   }
@@ -607,6 +621,54 @@ function renderField(f, group) {
   return box;
 }
 
+// Clawd из Claude Code, 32x20 в пикселях дисплея: тело, руки, ноги, глаза
+const CLAWD_SVG = `<svg class="clawd-sprite" viewBox="0 0 32 20" width="48" height="30" shape-rendering="crispEdges" aria-hidden="true">
+  <rect x="4" y="0" width="24" height="16"/>
+  <rect class="clawd-arm-l" x="0" y="8" width="4" height="4"/><rect class="clawd-arm-r" x="28" y="8" width="4" height="4"/>
+  <rect class="clawd-leg-a" x="6" y="16" width="2" height="4"/><rect class="clawd-leg-b" x="10" y="16" width="2" height="4"/>
+  <rect class="clawd-leg-a" x="20" y="16" width="2" height="4"/><rect class="clawd-leg-b" x="24" y="16" width="2" height="4"/>
+  <g class="clawd-eyes"><rect x="8" y="4" width="2" height="4"/><rect x="22" y="4" width="2" height="4"/></g>
+</svg>`;
+
+// Пасхалка: Clawd сидит на черте между подразделами и болтает ногами. Нажатие включает его заставки:
+// он вскакивает и бегает по черте, а обычные заставки гаснут (у них условие intro_clawd = false)
+function renderClawd(f) {
+  const perch = document.createElement('div');
+  perch.className = 'clawd-perch';
+  perch.dataset.key = f.key;
+  const track = document.createElement('div');
+  track.className = 'clawd-track';
+  const runner = document.createElement('div');
+  runner.className = 'clawd-runner';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'clawd';
+  button.setAttribute('aria-label', f.label);
+  button.title = f.label;
+  button.innerHTML = CLAWD_SVG;
+  runner.append(button);
+  track.append(runner);
+  const caption = textEl('span', 'clawd-caption', f.help ?? '');
+
+  const show = () => {
+    const on = state.values[f.key];
+    perch.classList.toggle('on', on);
+    button.setAttribute('aria-pressed', String(on));
+    caption.hidden = !on;
+  };
+  button.addEventListener('click', () => {
+    state.values[f.key] = !state.values[f.key];
+    show();
+    saveValues();
+    updateVisibility();
+    updateBadges();
+    updateButtons();
+  });
+  show();
+  perch.append(track, caption);
+  return perch;
+}
+
 // Превью анимации с дисплея: гифка из web/previews (снята tools/render_previews.py),
 // при отключённой в системе анимации - один кадр
 function previewFigure(f) {
@@ -632,10 +694,10 @@ function updateVisibility() {
   for (const f of state.fw?.config?.fields ?? []) {
     const box = $('config-form').querySelector(`[data-key="${f.key}"]`);
     const visible = isVisible(f, state.values);
-    // подпункт не прячется, а гаснет: видно, что без родительской галочки он не работает
-    if (f.subitem) {
+    // подпункт и Clawd не прячутся, а гаснут: видно, что без родительской галочки они не работают
+    if (f.subitem || f.widget === 'clawd') {
       box.classList.toggle('field-off', !visible);
-      box.querySelectorAll('input, select').forEach((el) => { el.disabled = state.busy || !visible; });
+      box.querySelectorAll('input, select, button').forEach((el) => { el.disabled = state.busy || !visible; });
       continue;
     }
     box.hidden = !visible;

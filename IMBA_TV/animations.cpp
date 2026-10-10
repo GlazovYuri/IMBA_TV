@@ -1098,16 +1098,21 @@ void displayIntroFinish(uint8_t dev_charge, bool is_charging, euc_data_t& data)
   const fw_config_t& cfg = config();
   if(!cfg.intro_logo) return;
 
-  // отмеченные заставки: волна, разрушение, взрыв, затем три с Clawd - в порядке introAnimation.
+  // отмеченные заставки: волна, разрушение, взрыв - в порядке introAnimation.
+  // Пасхалка Clawd на сайте заменяет их тремя заставками с Clawd (3..5).
   // Ни одной - после логотипа сразу интерфейс
-  int enabled[6];
+  int enabled[3];
   int enabled_cnt = 0;
-  if(cfg.intro_wave) enabled[enabled_cnt++] = 0;
-  if(cfg.intro_break) enabled[enabled_cnt++] = 1;
-  if(cfg.intro_explosion) enabled[enabled_cnt++] = 2;
-  if(cfg.intro_clawd_type) enabled[enabled_cnt++] = 3;
-  if(cfg.intro_clawd_laptop) enabled[enabled_cnt++] = 4;
-  if(cfg.intro_clawd_pixels) enabled[enabled_cnt++] = 5;
+  if(cfg.intro_clawd)
+  {
+    for(int i = 0; i < 3; i++) enabled[enabled_cnt++] = 3 + i;
+  }
+  else
+  {
+    if(cfg.intro_wave) enabled[enabled_cnt++] = 0;
+    if(cfg.intro_break) enabled[enabled_cnt++] = 1;
+    if(cfg.intro_explosion) enabled[enabled_cnt++] = 2;
+  }
   if(!enabled_cnt) return;
 
   uint32_t seed = introSeed();

@@ -1285,6 +1285,63 @@ h2 {
   .runhead-rev { margin-left: auto; }
 }
 
+/* Пасхалка: Clawd сидит на черте перед следующим подразделом и болтает ногами,
+   нажатый вскакивает и бегает по ней. Черту рисует сам насест, у подраздела своей нет */
+.clawd-perch { position: relative; margin-top: 28px; border-top: 1px solid var(--ink); }
+.clawd-perch + .fields-section { margin-top: 0; border-top: 0; }
+/* полоса для бега: от черты вверх на рост Clawd с прыжком и чуть вниз под свисающие ноги */
+.clawd-track { position: absolute; left: 0; right: 0; bottom: -8px; height: 52px; overflow: hidden; pointer-events: none; }
+/* бегунок шириной в полосу: сдвиг в процентах считается от неё, Clawd стоит у его левого края */
+.clawd-runner { position: absolute; left: 0; bottom: 8px; width: 100%; transform: translateX(calc(100% - 72px)); }
+.clawd {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 48px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #d97757;
+  line-height: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.clawd:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* сидит: тело на черте, ноги свисают за неё */
+.clawd-sprite { display: block; fill: currentColor; transform: translateY(6px); }
+.clawd-eyes { fill: #1d1d1b; }
+.clawd-eyes rect { transform-box: fill-box; transform-origin: 50% 100%; animation: clawd-blink 4.5s steps(1) infinite; }
+.clawd-arm-l, .clawd-arm-r, .clawd-leg-a, .clawd-leg-b { transform-box: fill-box; transform-origin: 50% 0; }
+.clawd-leg-a, .clawd-leg-b { animation: clawd-leg 1s steps(1) infinite; }
+.clawd-leg-b { animation-delay: -0.5s; }
+.clawd-caption { position: absolute; top: 6px; right: 0; color: var(--ink-2); font-size: 13px; }
+
+/* бег: прыжок с черты, затем туда-обратно. Руки ходят на 2 px, тело подскакивает на 1, поэтому
+   в противофазе рука всё равно движется. В первой половине бежит влево и смотрит туда же */
+.clawd-perch.on .clawd-runner { animation: clawd-run 9s linear 0.35s infinite; }
+.clawd-perch.on .clawd { animation: clawd-face 9s steps(1) 0.35s infinite; }
+.clawd-perch.on .clawd-sprite { transform: none; animation: clawd-hop 0.35s ease-out, clawd-bob 0.24s steps(1) 0.35s infinite; }
+.clawd-perch.on .clawd-eyes { transform: translateX(1px); }
+.clawd-perch.on .clawd-arm-l,
+.clawd-perch.on .clawd-arm-r { animation: clawd-arm 0.24s steps(1) 0.35s infinite; }
+.clawd-perch.on .clawd-arm-r { animation-delay: 0.23s; }
+.clawd-perch.on .clawd-leg-a,
+.clawd-perch.on .clawd-leg-b { animation: clawd-leg 0.24s steps(1) 0.35s infinite; }
+.clawd-perch.on .clawd-leg-b { animation-delay: 0.23s; }
+
+/* без логотипа заставок нет: Clawd серый, замирает и не нажимается */
+.clawd-perch.field-off .clawd { color: var(--ink-3); cursor: not-allowed; }
+.clawd-perch.field-off * { animation-play-state: paused !important; }
+
+@keyframes clawd-blink { 0%, 93%, 97%, 100% { transform: scaleY(1); } 94% { transform: scaleY(0.25); } }
+@keyframes clawd-leg { 0% { transform: scaleY(1); } 50% { transform: scaleY(0.5); } }
+@keyframes clawd-hop { 0% { transform: translateY(6px); } 45% { transform: translateY(-8px); } 100% { transform: translateY(0); } }
+@keyframes clawd-bob { 0% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes clawd-arm { 0% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes clawd-run { 0%, 100% { transform: translateX(calc(100% - 72px)); } 50% { transform: translateX(0); } }
+@keyframes clawd-face { 0% { transform: scaleX(-1); } 50% { transform: scaleX(1); } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;

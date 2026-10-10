@@ -113,13 +113,22 @@
           "preview": "logo"
         },
         {
+          "key": "intro_clawd",
+          "type": "bool",
+          "default": false,
+          "label": "Заставки Clawd",
+          "help": "Играют заставки Clawd",
+          "widget": "clawd",
+          "depends": { "intro_logo": true }
+        },
+        {
           "key": "intro_wave",
           "type": "bool",
           "default": true,
           "label": "Волна",
           "help": "Волна с пузырями проходит слева направо и открывает данные",
           "preview": "wave",
-          "depends": { "intro_logo": true },
+          "depends": { "intro_logo": true, "intro_clawd": false },
           "subitem": true
         },
         {
@@ -129,7 +138,7 @@
           "label": "Разрушение",
           "help": "Логотип трескается и рассыпается на куски",
           "preview": "break",
-          "depends": { "intro_logo": true },
+          "depends": { "intro_logo": true, "intro_clawd": false },
           "subitem": true
         },
         {
@@ -139,37 +148,7 @@
           "label": "Взрыв",
           "help": "Логотип разлетается облаком частиц, как TNT в Minecraft",
           "preview": "explosion",
-          "depends": { "intro_logo": true },
-          "subitem": true
-        },
-        {
-          "key": "intro_clawd_type",
-          "type": "bool",
-          "default": false,
-          "label": "Clawd печатает интерфейс",
-          "help": "Clawd из Claude Code садится за ноутбук, стирает логотип и набирает данные с курсором",
-          "preview": "clawd_type",
-          "depends": { "intro_logo": true },
-          "subitem": true
-        },
-        {
-          "key": "intro_clawd_laptop",
-          "type": "bool",
-          "default": false,
-          "label": "Clawd: экран ноутбука",
-          "help": "Логотип оказывается на экране ноутбука, Clawd пишет код, и камера въезжает в готовый экран",
-          "preview": "clawd_laptop",
-          "depends": { "intro_logo": true },
-          "subitem": true
-        },
-        {
-          "key": "intro_clawd_pixels",
-          "type": "bool",
-          "default": false,
-          "label": "Clawd: пересборка из пикселей",
-          "help": "Ноутбук Clawd втягивает логотип и выпускает пиксели данных на их места",
-          "preview": "clawd_pixels",
-          "depends": { "intro_logo": true },
+          "depends": { "intro_logo": true, "intro_clawd": false },
           "subitem": true
         },
         {

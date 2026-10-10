@@ -85,8 +85,15 @@ test('зависимые поля', () => {
 
   // заставки играют только после логотипа
   const wave = fields.find((f) => f.key === 'intro_wave');
-  assert.equal(isVisible(wave, { intro_logo: true }), true);
-  assert.equal(isVisible(wave, { intro_logo: false }), false);
+  assert.equal(isVisible(wave, { intro_logo: true, intro_clawd: false }), true);
+  assert.equal(isVisible(wave, { intro_logo: false, intro_clawd: false }), false);
+
+  // пасхалка Clawd заменяет обычные заставки, сама она тоже только после логотипа
+  const clawd = fields.find((f) => f.key === 'intro_clawd');
+  assert.equal(clawd.default, false);
+  assert.equal(isVisible(wave, { intro_logo: true, intro_clawd: true }), false);
+  assert.equal(isVisible(clawd, { intro_logo: true }), true);
+  assert.equal(isVisible(clawd, { intro_logo: false }), false);
 });
 
 test('сохранённые настройки применяются, если подходят прошивке', () => {
