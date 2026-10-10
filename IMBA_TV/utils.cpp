@@ -39,6 +39,8 @@ void powerOff()
 
 void systemOff()
 {
+  // в глубоком сне выводы сохраняют состояние: горящий светодиод светил бы до пробуждения
+  digitalWrite(LED_BUILTIN, !LED_STATE_ON);
   sd_power_system_off();
 }
 

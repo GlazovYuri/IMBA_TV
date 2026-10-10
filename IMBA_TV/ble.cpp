@@ -1,5 +1,7 @@
 #include "ble.h"
 #include "version.h"
+#include "utils.h"
+#include "ble_dfu.h"
 #include <bluefruit.h>
 
 const int8_t tx_power = 8; //dBm
@@ -24,7 +26,7 @@ const uint32_t temperature_offset = 14;
 const uint32_t trip_offset = 16;
 const uint32_t limit_offset = 18;
 
-BLEDfu bledfu;
+BleDfuService bledfu;
 BLEDis bledis;
 BLEService euc_service(service_uuid);
 BLECharacteristic euc_char(char_uuid);
@@ -135,6 +137,8 @@ static void eucCharWriteCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint
 void bleInit(bool update_mode)
 {
   Bluefruit.setTxPower(tx_power);
+  // библиотека по умолчанию показывает светодиодом рекламу и подключение, на дисплее он не нужен
+  Bluefruit.autoConnLed(false);
 
   // сервис обновления первым, как в примерах Adafruit
   if(update_mode) bledfu.begin();
@@ -143,6 +147,8 @@ void bleInit(bool update_mode)
   bledis.setModel("IMBA TV");
   bledis.setHardwareRev("0.2");
   bledis.setFirmwareRev(FW_VERSION);
+  // по версии загрузчика сайт решает, можно ли прошивать по Bluetooth, ещё до перехода в загрузчик
+  if(bootloaderVersionText()[0]) bledis.setSoftwareRev(bootloaderVersionText());
   bledis.begin();
 
   if(!update_mode)
