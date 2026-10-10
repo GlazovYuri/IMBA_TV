@@ -144,7 +144,8 @@ function renderVersions() {
   }
 
   // в списке только последние версии; старая выбранная закрепляется последней строкой
-  const list = state.versions.slice(0, VISIBLE_VERSIONS);
+  const list = shortList();
+  const many = state.versions.length > list.length;
   const selectedTag = selectedRelease()?.tag ?? null;
   const pinned = selectedTag && !list.some((v) => v.tag === selectedTag);
   if (pinned) list.push(state.versions.find((v) => v.tag === selectedTag));
@@ -171,7 +172,6 @@ function renderVersions() {
     box.append(label);
   }
 
-  const many = state.versions.length > VISIBLE_VERSIONS;
   $('catalog-bar').hidden = !many;
   $('show-all-text').textContent = `Все версии: ${state.versions.length}`;
   $('show-all').setAttribute('aria-expanded', String(many && state.catalogOpen));
@@ -183,6 +183,20 @@ function selectedRelease() {
   return state.selected?.kind === 'release' ? state.selected.version : null;
 }
 
+// Тестовые версии из ветки dev (pre-release) сами не выбираются и не считаются последней
+function latestVersion() {
+  return state.versions.find((v) => !v.prerelease) ?? state.versions[0];
+}
+
+// последние обычные версии и над ними самая свежая тестовая, если она вышла позже них
+function shortList() {
+  const stable = state.versions.filter((v) => !v.prerelease);
+  if (!stable.length) return state.versions.slice(0, VISIBLE_VERSIONS);
+  const list = stable.slice(0, VISIBLE_VERSIONS);
+  if (state.versions[0].prerelease) list.unshift(state.versions[0]);
+  return list;
+}
+
 // первая строка описания релиза: у каждой версии видно, что в ней нового
 function noteSummary(v) {
   return (v.notes ?? '').split('\n').map((s) => s.replace(/^[-*]\s*/, '').trim()).find(Boolean) ?? '';
@@ -190,7 +204,7 @@ function noteSummary(v) {
 
 function versionTitle(v, className) {
   const title = textEl('span', className, v.tag);
-  if (v === state.versions[0]) title.append(badge('последняя'));
+  if (v === latestVersion()) title.append(badge('последняя'));
   if (v.prerelease) title.append(badge('тестовая', 'badge-pre'));
   return title;
 }
@@ -266,7 +280,7 @@ async function loadVersions() {
   }
 
   const fromHash = decodeURIComponent(location.hash.slice(1));
-  const initial = state.versions.find((v) => v.tag === fromHash) ?? state.versions[0];
+  const initial = state.versions.find((v) => v.tag === fromHash) ?? latestVersion();
   if (initial) select({ kind: 'release', version: initial });
   renderVersions();
 }
