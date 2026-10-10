@@ -21,15 +21,18 @@ struct __attribute__((packed)) fw_config_t
   uint8_t intro_wave;  // Волна
   uint8_t intro_break;  // Разрушение
   uint8_t intro_explosion;  // Взрыв
+  uint8_t intro_clawd_type;  // Clawd печатает интерфейс
+  uint8_t intro_clawd_laptop;  // Clawd: экран ноутбука
+  uint8_t intro_clawd_pixels;  // Clawd: пересборка из пикселей
   uint8_t poweroff_animation;  // Анимация выключения
   uint16_t power_on_ms;  // Удержание для включения
   uint16_t power_off_ms;  // Удержание для выключения
   uint8_t ble_update;  // Разрешить обновление прошивки по Bluetooth
 };
 
-static_assert(sizeof(fw_config_t) == 20, "config.json и fw_config_t разошлись");
+static_assert(sizeof(fw_config_t) == 23, "config.json и fw_config_t разошлись");
 
-#define FW_CONFIG_DEFAULTS { 1, 1, 1, 1, 1512, 1, 0, 80, 100, 1, 1, 1, 1, 1, 500, 1000, 1 }
+#define FW_CONFIG_DEFAULTS { 1, 1, 1, 1, 1512, 1, 0, 80, 100, 1, 1, 1, 1, 0, 0, 0, 1, 500, 1000, 1 }
 
 enum
 {
@@ -60,6 +63,9 @@ static inline void configSanitize(fw_config_t& c)
   if(c.intro_wave > 1) c.intro_wave = 1;
   if(c.intro_break > 1) c.intro_break = 1;
   if(c.intro_explosion > 1) c.intro_explosion = 1;
+  if(c.intro_clawd_type > 1) c.intro_clawd_type = 1;
+  if(c.intro_clawd_laptop > 1) c.intro_clawd_laptop = 1;
+  if(c.intro_clawd_pixels > 1) c.intro_clawd_pixels = 1;
   if(c.poweroff_animation > 1) c.poweroff_animation = 1;
   if(c.power_on_ms < 100 || c.power_on_ms > 3000) c.power_on_ms = 500;
   if(c.power_off_ms < 500 || c.power_off_ms > 5000) c.power_off_ms = 1000;
@@ -99,16 +105,24 @@ static inline void configSanitize(fw_config_t& c)
   "п трескается и рассыпается на куски\",\"preview\":\"break\",\"depends\":{\"intro_logo\":true},\"subitem\":t" \
   "rue,\"offset\":12,\"size\":1},{\"key\":\"intro_explosion\",\"type\":\"bool\",\"default\":true,\"label\":\"Взрыв\"," \
   "\"help\":\"Логотип разлетается облаком частиц, как TNT в Minecraft\",\"preview\":\"explosion\",\"depends\"" \
-  ":{\"intro_logo\":true},\"subitem\":true,\"offset\":13,\"size\":1},{\"key\":\"poweroff_animation\",\"type\":\"bo" \
-  "ol\",\"default\":true,\"section\":\"При выключении\",\"label\":\"Анимация выключения\",\"help\":\"Экран сжимае" \
-  "тся в линию, затем в точку и гаснет, как у старого телевизора\",\"preview\":\"poweroff\",\"offset\":14," \
-  "\"size\":1}]},{\"title\":\"Кнопка\",\"help\":\"Сколько держать кнопку, чтобы включить и выключить дисплей" \
-  "\",\"fields\":[{\"key\":\"power_on_ms\",\"type\":\"u16\",\"default\":500,\"min\":100,\"max\":3000,\"step\":100,\"uni" \
-  "t\":\"мс\",\"label\":\"Удержание для включения\",\"offset\":15,\"size\":2},{\"key\":\"power_off_ms\",\"type\":\"u1" \
-  "6\",\"default\":1000,\"min\":500,\"max\":5000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для выключения\"" \
-  ",\"help\":\"Более короткое нажатие переключает экран\",\"offset\":17,\"size\":2}]},{\"title\":\"Обновление " \
-  "по Bluetooth\",\"help\":\"Прошивка с телефона без кабеля\",\"fields\":[{\"key\":\"ble_update\",\"type\":\"bool" \
-  "\",\"default\":true,\"label\":\"Разрешить обновление прошивки по Bluetooth\",\"help\":\"Режим обновления в" \
-  "ключается, только если при включении держать кнопку ещё 3 секунды после того, как загорится экра" \
-  "н, и заряд не ниже 30%. В обычной работе прошить дисплей по Bluetooth нельзя\",\"offset\":19,\"size\"" \
-  ":1}]}]}"
+  ":{\"intro_logo\":true},\"subitem\":true,\"offset\":13,\"size\":1},{\"key\":\"intro_clawd_type\",\"type\":\"bool" \
+  "\",\"default\":false,\"label\":\"Clawd печатает интерфейс\",\"help\":\"Clawd из Claude Code садится за ноу" \
+  "тбук, стирает логотип и набирает данные с курсором\",\"preview\":\"clawd_type\",\"depends\":{\"intro_log" \
+  "o\":true},\"subitem\":true,\"offset\":14,\"size\":1},{\"key\":\"intro_clawd_laptop\",\"type\":\"bool\",\"default" \
+  "\":false,\"label\":\"Clawd: экран ноутбука\",\"help\":\"Логотип оказывается на экране ноутбука, Clawd пи" \
+  "шет код, и камера въезжает в готовый экран\",\"preview\":\"clawd_laptop\",\"depends\":{\"intro_logo\":tru" \
+  "e},\"subitem\":true,\"offset\":15,\"size\":1},{\"key\":\"intro_clawd_pixels\",\"type\":\"bool\",\"default\":fals" \
+  "e,\"label\":\"Clawd: пересборка из пикселей\",\"help\":\"Ноутбук Clawd втягивает логотип и выпускает пи" \
+  "ксели данных на их места\",\"preview\":\"clawd_pixels\",\"depends\":{\"intro_logo\":true},\"subitem\":true," \
+  "\"offset\":16,\"size\":1},{\"key\":\"poweroff_animation\",\"type\":\"bool\",\"default\":true,\"section\":\"При вы" \
+  "ключении\",\"label\":\"Анимация выключения\",\"help\":\"Экран сжимается в линию, затем в точку и гаснет," \
+  " как у старого телевизора\",\"preview\":\"poweroff\",\"offset\":17,\"size\":1}]},{\"title\":\"Кнопка\",\"help\"" \
+  ":\"Сколько держать кнопку, чтобы включить и выключить дисплей\",\"fields\":[{\"key\":\"power_on_ms\",\"ty" \
+  "pe\":\"u16\",\"default\":500,\"min\":100,\"max\":3000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для включ" \
+  "ения\",\"offset\":18,\"size\":2},{\"key\":\"power_off_ms\",\"type\":\"u16\",\"default\":1000,\"min\":500,\"max\":50" \
+  "00,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для выключения\",\"help\":\"Более короткое нажатие пере" \
+  "ключает экран\",\"offset\":20,\"size\":2}]},{\"title\":\"Обновление по Bluetooth\",\"help\":\"Прошивка с тел" \
+  "ефона без кабеля\",\"fields\":[{\"key\":\"ble_update\",\"type\":\"bool\",\"default\":true,\"label\":\"Разрешить " \
+  "обновление прошивки по Bluetooth\",\"help\":\"Режим обновления включается, только если при включении" \
+  " держать кнопку ещё 3 секунды после того, как загорится экран, и заряд не ниже 30%. В обычной ра" \
+  "боте прошить дисплей по Bluetooth нельзя\",\"offset\":22,\"size\":1}]}]}"

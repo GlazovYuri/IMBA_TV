@@ -165,8 +165,8 @@ int main(int argc, char** argv)
   save((out + "/logo.bin").c_str());
 
   // заставки: логотип секунду и переход, как displayIntroBegin + displayIntroFinish
-  const char* names[3] = {"wave", "break", "explosion"};
-  for(int anim = 0; anim < 3; anim++)
+  const char* names[6] = {"wave", "break", "explosion", "clawd_type", "clawd_laptop", "clawd_pixels"};
+  for(int anim = 0; anim < 6; anim++)
   {
     begin();
     displayPlayIntroNum(anim, seed, dev_charge, false, d);

@@ -33,7 +33,8 @@ PIXEL_OFF = (16, 16, 16)
 SEED = 0x5EED1234
 
 # кадр для PNG: момент от начала записи, мс (у заставок первая секунда - логотип)
-POSTER_MS = {'logo': 500, 'wave': 1500, 'break': 1650, 'explosion': 1500, 'poweroff': 1330}
+POSTER_MS = {'logo': 500, 'wave': 1500, 'break': 1650, 'explosion': 1500,
+             'clawd_type': 3000, 'clawd_laptop': 3050, 'clawd_pixels': 2900, 'poweroff': 1330}
 
 
 def find_gyveroled():

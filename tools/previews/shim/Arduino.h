@@ -6,7 +6,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <algorithm>
 #include "Print.h"
+
+using std::min;
+using std::max;
+
+#define PI 3.1415926535897932384626433832795
 
 typedef uint8_t byte;
 typedef bool boolean;

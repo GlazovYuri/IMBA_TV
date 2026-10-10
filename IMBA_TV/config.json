@@ -143,6 +143,36 @@
           "subitem": true
         },
         {
+          "key": "intro_clawd_type",
+          "type": "bool",
+          "default": false,
+          "label": "Clawd печатает интерфейс",
+          "help": "Clawd из Claude Code садится за ноутбук, стирает логотип и набирает данные с курсором",
+          "preview": "clawd_type",
+          "depends": { "intro_logo": true },
+          "subitem": true
+        },
+        {
+          "key": "intro_clawd_laptop",
+          "type": "bool",
+          "default": false,
+          "label": "Clawd: экран ноутбука",
+          "help": "Логотип оказывается на экране ноутбука, Clawd пишет код, и камера въезжает в готовый экран",
+          "preview": "clawd_laptop",
+          "depends": { "intro_logo": true },
+          "subitem": true
+        },
+        {
+          "key": "intro_clawd_pixels",
+          "type": "bool",
+          "default": false,
+          "label": "Clawd: пересборка из пикселей",
+          "help": "Ноутбук Clawd втягивает логотип и выпускает пиксели данных на их места",
+          "preview": "clawd_pixels",
+          "depends": { "intro_logo": true },
+          "subitem": true
+        },
+        {
           "key": "poweroff_animation",
           "type": "bool",
           "default": true,
