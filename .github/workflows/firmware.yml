@@ -1,5 +1,6 @@
 # Сборка прошивки. На любой ветке — проверочная сборка с артефактом,
-# на основной ветке — новая версия: тег vX.Y.Z, релиз с .zip/.hex/.uf2 и обновление сайта.
+# на основной ветке — новая версия: тег vX.Y.Z, релиз с .zip/.hex/.uf2 и обновление сайта,
+# на ветке dev — тестовая версия: тег vX.Y.Z-dev.N, pre-release и обновление сайта.
 name: Firmware
 
 on:
@@ -13,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: Какую часть версии увеличить (на основной ветке)
+        description: Какую часть версии увеличить (на основной ветке и в dev)
         type: choice
         options: [patch, minor, major]
         default: patch
@@ -31,6 +32,8 @@ env:
   FQBN: adafruit:nrf52:imba_pro_micro
   # Версия первого релиза, пока в репозитории нет ни одного тега vX.Y.Z
   INITIAL_VERSION: 0.5.0
+  # Ветка тестовых прошивок: они публикуются на сайте с пометкой «тестовая»
+  DEV_BRANCH: dev
   GYVEROLED_VERSION: 1.6.4
   ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS: https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
 
@@ -40,6 +43,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -63,9 +67,16 @@ jobs:
             esac
           fi
 
+          prerelease=false
           if [ "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH" ]; then
             version=$next
             release=true
+          elif [ "$GITHUB_REF" = "refs/heads/$DEV_BRANCH" ]; then
+            # тестовые сборки будущей версии нумеруются по порядку: 0.5.8-dev.1, 0.5.8-dev.2…
+            n=$(git tag --list "v$next-dev.*" | sed 's/.*-dev\.//' | grep -xE '[0-9]+' | sort -n | tail -n1 || true)
+            version="$next-dev.$(( ${n:-0} + 1 ))"
+            release=true
+            prerelease=true
           else
             version="$next-dev.${GITHUB_SHA::7}"
             release=false
@@ -73,6 +84,7 @@ jobs:
           echo "Предыдущая версия: ${last:-нет}, новая: $version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@v5
         with:
@@ -141,6 +153,7 @@ jobs:
       contents: write
     env:
       VERSION: ${{ needs.build.outputs.version }}
+      PRERELEASE: ${{ needs.build.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -153,7 +166,12 @@ jobs:
 
       - name: Release notes
         run: |
-          last=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+          if [ "$PRERELEASE" = true ]; then
+            # тестовая версия: изменения с предыдущей сборки ветки, тестовой или обычной
+            last=$(git describe --tags --abbrev=0 --match 'v*' HEAD 2>/dev/null || true)
+          else
+            last=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+          fi
           git log --no-merges -n 50 --pretty='format:- %s' ${last:+$last..}HEAD > notes.md
           cat notes.md
 
@@ -161,15 +179,34 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # pre-release не становится «Latest» на GitHub, а сайт подписывает его «тестовая»
           gh release create "v$VERSION" dist/* \
             --target "$GITHUB_SHA" \
             --title "v$VERSION" \
-            --notes-file notes.md
+            --notes-file notes.md \
+            $([ "$PRERELEASE" = true ] && echo --prerelease)
 
   pages:
     needs: release
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     uses: ./.github/workflows/pages.yml
     permissions:
       contents: read
       pages: write
       id-token: write
+
+  # Сайт публикуется только с основной ветки: страница из dev может быть недоделанной,
+  # а GitHub Pages по умолчанию принимает выкладку только с неё. Поэтому после тестовой
+  # версии запускаем Pages на основной ветке, он соберёт список вместе с новым pre-release.
+  pages-dev:
+    needs: release
+    if: github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Rebuild site from the default branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH"
