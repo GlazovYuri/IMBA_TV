@@ -158,7 +158,8 @@ export class SerialDfu {
           if (value) decoder.push(value);
         }
       } catch (e) {
-        this.readError = e;
+        // web-serial-polyfill (WebUSB на Android) завершает поток строкой, а не Error
+        this.readError = e instanceof Error ? e : new Error(String(e));
       }
       this.wakeWaiter();
     })();

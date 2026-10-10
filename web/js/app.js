@@ -2,6 +2,7 @@ import { loadFirmware, FirmwareError, withImageCrc, makeUf2 } from './firmware.j
 import { SerialDfu, DfuError, touch1200, activateWaitTime } from './dfu.js';
 import { BleDfu, BleDfuError, requestDfuDevice } from './ble-dfu.js';
 import { findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues } from './config.js';
+import { serial, serialApi, isAndroid } from './serial.js';
 
 // USB VID Adafruit: и прошивка, и загрузчик платы (см. boards/boards.txt).
 // PID приложения — 0x80xx, загрузчика — 0x00xx.
@@ -29,11 +30,11 @@ const state = {
   cancel: null,
 };
 
-const hasSerial = 'serial' in navigator;
+const hasSerial = serial !== null;
 const hasBluetooth = 'bluetooth' in navigator;
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const isMobile = isIOS || /Android/.test(navigator.userAgent);
+const isMobile = isIOS || isAndroid;
 
 // ---------- Журнал и статус ----------
 
@@ -819,7 +820,7 @@ function obtainBootloaderPort(oldPort) {
     };
 
     timer = setInterval(async () => {
-      const port = (await navigator.serial.getPorts()).find((p) => p !== oldPort && isBootloader(p));
+      const port = (await serial.getPorts()).find((p) => p !== oldPort && isBootloader(p));
       if (port) {
         log(`Загрузчик найден: ${describePort(port)}`);
         finish(resolve, port);
@@ -832,7 +833,7 @@ function obtainBootloaderPort(oldPort) {
 
     $('pick-bootloader').onclick = async () => {
       try {
-        const port = await navigator.serial.requestPort(portFilters());
+        const port = await serial.requestPort(portFilters());
         log(`Выбран порт загрузчика: ${describePort(port)}`);
         finish(resolve, port);
       } catch (e) {
@@ -875,6 +876,10 @@ function explain(e) {
   if (e.name === 'InvalidStateError' || e.name === 'NetworkError') {
     return 'Не удалось открыть порт. Закройте другие программы, которые его используют (Arduino IDE, монитор порта), переподключите плату и попробуйте снова.';
   }
+  // WebUSB на Android: устройство не открылось (занято другим приложением или кабель отошёл)
+  if (serialApi === 'WebUSB' && /setting up device/.test(e.message)) {
+    return 'Не удалось открыть USB-устройство. Закройте другие приложения, которые могли его занять, переподключите кабель и попробуйте снова.';
+  }
   if (e instanceof DfuError) {
     return `${e.message}. Переподключите плату и нажмите «Прошить» ещё раз.`;
   }
@@ -887,7 +892,7 @@ async function flash() {
 
   let port;
   try {
-    port = await navigator.serial.requestPort(portFilters());
+    port = await serial.requestPort(portFilters());
   } catch (e) {
     if (e.name === 'NotFoundError') {
       setStatus('Порт не выбран. Если платы нет в списке, проверьте, что кабель передаёт данные, или включите «Показывать все последовательные порты» в разделе «Дополнительно».');
@@ -909,7 +914,7 @@ async function flash() {
     const image = buildImage(fw);
     log(`Прошивка: ${selectedName()}, ${image.bin.length} байт`);
     if (fw.config) log(`Настройки: ${describeSettings(fw, image.values)}`);
-    log(`Выбран порт: ${describePort(port)}`);
+    log(`Выбран порт: ${describePort(port)} (${serialApi})`);
 
     if (!isBootloader(port)) {
       work.step('boot');
@@ -1050,7 +1055,12 @@ function initMethods() {
 
   if (!hasSerial) {
     $('usb-unsupported').hidden = false;
-    if (isMobile) $('usb-unsupported').textContent = 'На телефоне браузер не умеет работать с USB-портами. Прошейте дисплей по Bluetooth.';
+    if (isIOS) $('usb-unsupported').textContent = 'На iPhone браузеры не умеют работать с USB-устройствами. Прошейте дисплей по Bluetooth.';
+    else if (isAndroid) $('usb-unsupported').textContent = 'Этот браузер не умеет работать с USB-устройствами. Откройте страницу в Chrome, Edge или Яндекс Браузере либо прошейте дисплей по Bluetooth.';
+  }
+  // на Android кабель идёт от телефона: напоминаем, какой нужен
+  if (isAndroid) {
+    $('usb-connect').textContent = 'Подключите IMBA TV к телефону USB-кабелем с передачей данных: USB-C на USB-C или обычным кабелем через OTG-переходник. Дисплей включится сам.';
   }
   if (!hasBluetooth) {
     const note = $('ble-unsupported');
