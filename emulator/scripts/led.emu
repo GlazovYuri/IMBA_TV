@@ -1,0 +1,43 @@
+# Красный светодиод P0.15: не должен мигать от BLE и не должен гореть после выключения.
+
+echo плата выключена после установки батареи
+wait 300
+expect cpu=off
+
+echo телефон выключен: плата включается и ищет его (реклама BLE)
+phone=0
+button=1
+wait 900
+expect cpu=running
+button=0
+wait 3000
+expect connected=0
+echo пять замеров через 250 мс: при мигании хотя бы один попадёт на горящую фазу
+expect led=0
+wait 250
+expect led=0
+wait 250
+expect led=0
+wait 250
+expect led=0
+wait 250
+expect led=0
+
+echo телефон включается и подключается
+phone=1
+wait 3000
+expect connected=1
+expect led=0
+
+echo выключение кнопкой, пока телефон подключён
+button=1
+wait 1600
+button=0
+wait 1500
+expect cpu=off
+expect led=0
+
+echo в System OFF светодиод остаётся в том же состоянии
+wait 5000
+expect cpu=off
+expect led=0

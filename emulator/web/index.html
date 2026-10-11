@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Эмулятор IMBA TV</title>
+<style>
+:root {
+  --bg: #101418; --panel: #182027; --panel2: #1f2930; --line: #2c3a44; --text: #d7e0e6; --dim: #8396a3;
+  --accent: #4fb3ff; --ok: #44d17a; --warn: #ffb547; --bad: #ff5d5d; --pcb: #0f3b2a; --pcb-line: #1c5a40;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+header h1 { font-size: 16px; margin: 0 8px 0 0; font-weight: 600; }
+.badge { padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; background: var(--panel2); border: 1px solid var(--line); }
+.badge.running { color: var(--ok); border-color: var(--ok); }
+.badge.off { color: var(--dim); }
+.badge.crashed { color: #fff; background: var(--bad); border-color: var(--bad); }
+.spacer { flex: 1; }
+button, select, input { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; }
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.on { background: #1d4a6b; border-color: var(--accent); }
+input[type=number] { width: 90px; }
+input[type=checkbox] { width: auto; }
+main { display: grid; grid-template-columns: minmax(340px, 580px) 1fr; gap: 16px; padding: 16px; }
+@media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); margin: 0 0 10px; font-weight: 600; }
+.pcb { background: var(--pcb); border: 2px solid var(--pcb-line); border-radius: 14px; padding: 16px; position: relative; }
+.screen-wrap { background: #000; border-radius: 6px; padding: 10px; border: 3px solid #222; position: relative; }
+#oled { width: 100%; image-rendering: pixelated; display: block; }
+.screen-note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #555; font-size: 13px; pointer-events: none; text-align: center; }
+.controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 16px; }
+.hwbtn { width: 74px; height: 74px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #555, #222); border: 4px solid #111; box-shadow: 0 3px 0 #000; color: #ccc; font-size: 11px; user-select: none; touch-action: none; }
+.hwbtn.pressed { transform: translateY(2px); box-shadow: 0 1px 0 #000; background: radial-gradient(circle at 40% 35%, #444, #111); }
+.led { width: 16px; height: 16px; border-radius: 50%; background: #0b1d33; border: 2px solid #0a0f14; display: inline-block; vertical-align: middle; }
+.led.lit { background: #4aa8ff; box-shadow: 0 0 12px 4px #3b8fff; }
+.ind { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #b9d6c6; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #234; display: inline-block; }
+.dot.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0; }
+.row label { min-width: 120px; color: var(--dim); }
+input[type=range] { flex: 1; min-width: 140px; padding: 0; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-size: 13px; }
+.kv div:nth-child(odd) { color: var(--dim); }
+.kv div:nth-child(even) { font-family: var(--mono); }
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.tabs button { border-radius: 6px 6px 0 0; }
+.tab { display: none; }
+.tab.active { display: block; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--dim); font-weight: 500; }
+td.mono, .mono { font-family: var(--mono); }
+.lvl1 { color: var(--ok); font-weight: 700; }
+.lvl0 { color: #6a8090; }
+.lvlz { color: #445; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+#log { font-family: var(--mono); font-size: 12px; height: 240px; overflow: auto; background: #0b0f12; border-radius: 6px; padding: 8px; white-space: pre-wrap; }
+#log .fw { color: #e8e8a0; }
+#log .emu { color: var(--warn); }
+#log .board { color: var(--accent); }
+#log .script { color: #b48cff; }
+#log .err { color: var(--bad); font-weight: 600; }
+.memrow { cursor: pointer; }
+.memrow:hover { background: var(--panel2); }
+.memrow.changed td:last-child { color: var(--warn); }
+.dump { font-family: var(--mono); font-size: 12px; white-space: pre; background: #0b0f12; padding: 8px; border-radius: 6px; overflow: auto; max-height: 340px; }
+.dump .chg { color: var(--warn); }
+canvas.bmp { image-rendering: pixelated; background: #000; border: 1px solid var(--line); display: block; margin-top: 6px; }
+.hint { color: var(--dim); font-size: 12px; }
+.crash { background: #3a1416; border: 1px solid var(--bad); color: #ffd0d0; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; display: none; }
+.field-row { display: grid; grid-template-columns: 20px 150px 90px 1fr; gap: 8px; align-items: center; margin: 4px 0; }
+.field-row input[type=range] { min-width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>IMBA TV · эмулятор платы</h1>
+  <span id="cpu" class="badge">…</span>
+  <span class="hint" id="clock"></span>
+  <span class="spacer"></span>
+  <button id="pause">Пауза</button>
+  <select id="rate" title="Скорость времени">
+    <option value="0.1">×0.1</option><option value="0.25">×0.25</option><option value="0.5">×0.5</option>
+    <option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option><option value="8">×8</option>
+  </select>
+  <button id="rst" title="Сброс по выводу RESET">RESET</button>
+  <button id="cold" title="Снять и снова подать питание">Перезапуск питания</button>
+  <button id="shot" title="Сохранить картинку экрана">Снимок</button>
+</header>
+
+<main>
+  <section>
+    <div class="crash" id="crash"></div>
+    <div class="pcb">
+      <div class="screen-wrap">
+        <canvas id="oled" width="128" height="64"></canvas>
+        <div class="screen-note" id="screenNote"></div>
+      </div>
+      <div class="controls">
+        <button class="hwbtn" id="hwbtn" title="Кнопка (пробел). Держать 0,5 с - включение, 1 с - выключение">КНОПКА</button>
+        <div>
+          <div class="ind"><span class="led" id="led"></span> LED (P0.15)</div>
+          <div class="ind" style="margin-top:8px"><span class="dot" id="pwren"></span> PWREN дисплея</div>
+          <div class="ind"><span class="dot" id="sd"></span> SoftDevice</div>
+          <div class="ind"><span class="dot" id="blei"></span> <span id="bletext">BLE</span></div>
+        </div>
+        <div>
+          <button id="usb">USB: отключён</button>
+          <div class="hint" style="margin-top:6px">Цвет OLED:
+            <select id="color"><option value="#e8f4ff">белый</option><option value="#5ec8ff">голубой</option><option value="#ffd23a">жёлтый</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <label style="color:#b9d6c6">Батарея (VDDH)</label>
+        <input type="range" id="vbat" min="2700" max="4400" step="10">
+        <span class="mono" id="vbatv" style="width:64px"></span>
+      </div>
+      <div class="hint" style="color:#8fb5a3" id="vbatnote"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Журнал (Serial, события платы, предупреждения эмулятора)</h2>
+      <div id="log"></div>
+      <div class="row"><button id="logclear">Очистить</button><label class="hint" style="min-width:0"><input type="checkbox" id="logfollow" checked> прокручивать</label></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="tabs">
+      <button data-tab="phone" class="on">Телефон / BLE</button>
+      <button data-tab="pins">Выводы</button>
+      <button data-tab="periph">Периферия</button>
+      <button data-tab="mem">Память</button>
+    </div>
+
+    <div class="tab active" id="tab-phone">
+      <div class="row">
+        <button id="phone">Телефон</button>
+        <button id="drop" title="Обрыв радиосвязи; телефон переподключится сам">Обрыв связи</button>
+        <button id="tx">Телеметрия</button>
+        <button id="ride">Имитация поездки</button>
+        <label style="min-width:0">период, мс</label><input type="number" id="interval" min="5" max="10000">
+      </div>
+      <p class="hint">Телефон с LoEUC подключается, как только плата начинает рекламу, и шлёт пакеты в характеристику. Снятая галочка означает, что поле не передаётся (INT16_MIN).</p>
+      <div id="fields"></div>
+      <h2 style="margin-top:16px">Сырой пакет</h2>
+      <div class="row">
+        <input id="packet" class="mono" style="flex:1" placeholder="4c4501 00 0000 00fa 0190 03f0 0320 015e 007b 0320">
+        <button id="sendpkt">Отправить</button>
+      </div>
+      <div class="hint">hex, пробелы игнорируются. Формат: 'L' 'E' 01, номер кадра, 2 байта, затем big-endian int16 ×10: скорость, ШИМ, напряжение, заряд, температура, пробег, порог ШИМ.</div>
+      <h2 style="margin-top:16px">Что видит прошивка</h2>
+      <div class="kv" id="blekv"></div>
+    </div>
+
+    <div class="tab" id="tab-pins">
+      <table>
+        <thead><tr><th>D</th><th>nRF</th><th>Назначение</th><th>Режим</th><th>Выход</th><th>Уровень</th></tr></thead>
+        <tbody id="pins"></tbody>
+      </table>
+      <p class="hint">Уровень: 1 / 0 / Z (вход без подтяжки или вывод не настроен). Кнопка замыкает D0 на землю. В System OFF выводы сохраняют состояние; пробуждает только вывод в режиме *_SENSE.</p>
+    </div>
+
+    <div class="tab" id="tab-periph">
+      <div class="grid2">
+        <div><h2>Процессор</h2><div class="kv" id="cpukv"></div></div>
+        <div><h2>Дисплей SH1106</h2><div class="kv" id="oledkv"></div></div>
+        <div><h2>I2C (TWIM)</h2><div class="kv" id="i2ckv"></div></div>
+        <div><h2>АЦП / батарея</h2><div class="kv" id="adckv"></div></div>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-mem">
+      <div class="row">
+        <input id="memfilter" placeholder="фильтр по имени или файлу" style="flex:1">
+        <span class="hint" id="memtotal"></span>
+      </div>
+      <table>
+        <thead><tr><th>Переменная</th><th>Файл</th><th>Байт</th><th>Значение</th></tr></thead>
+        <tbody id="mem"></tbody>
+      </table>
+      <p class="hint">Глобальные и static-переменные прошивки, снимок каждые 50 мс. Нажмите на строку, чтобы увидеть дамп. Буферы по 1024 байта показаны как картинка 128×64. Размеры и выравнивание взяты из сборки под компьютер; на nRF52 они могут немного отличаться.</p>
+      <h2 style="margin-top:12px">Память кадра SH1106 (132×64, видны столбцы 2..129)</h2>
+      <canvas id="gddram" class="bmp" width="132" height="64" style="width:396px;height:192px"></canvas>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let st = null, mem = null, prevMem = {}, openSyms = new Set(), logNext = 0;
+
+async function cmd(params) {
+  const q = new URLSearchParams(params).toString();
+  const r = await fetch('/api/cmd?' + q);
+  if (!r.ok) { const j = await r.json().catch(() => ({})); addLog('[ui] ' + (j.error || r.status), 'err'); }
+}
+
+// ---------- дисплей ----------
+const oled = $('oled'), octx = oled.getContext('2d');
+function drawOled(o) {
+  const c = $('color').value, rgb = [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16));
+  const visible = o.powered && o.on;
+  const k = 0.25 + 0.75 * (o.contrast / 255);
+  const img = octx.createImageData(128, 64), bits = o.glass;
+  for (let y = 0; y < 64; y++) for (let x = 0; x < 128; x++) {
+    const lit = (parseInt(bits.substr((y * 16 + (x >> 3)) * 2, 2), 16) >> (7 - (x & 7))) & 1;
+    const p = (y * 128 + x) * 4, bg = visible ? 8 : 3;
+    img.data[p] = lit ? rgb[0] * k : bg; img.data[p + 1] = lit ? rgb[1] * k : bg; img.data[p + 2] = lit ? rgb[2] * k : bg + 2;
+    img.data[p + 3] = 255;
+  }
+  octx.putImageData(img, 0, 0);
+  $('screenNote').textContent = !o.powered ? 'дисплей обесточен (PWREN = 0)' : (!o.on ? 'дисплей выключен командой 0xAE' : '');
+}
+
+// ---------- кнопка ----------
+const hw = $('hwbtn');
+let pressed = false;
+function setBtn(v) { if (v === pressed) return; pressed = v; hw.classList.toggle('pressed', v); cmd({ button: v ? 1 : 0 }); }
+hw.addEventListener('pointerdown', e => { hw.setPointerCapture(e.pointerId); setBtn(true); });
+hw.addEventListener('pointerup', () => setBtn(false));
+hw.addEventListener('pointercancel', () => setBtn(false));
+document.addEventListener('keydown', e => { if (e.code === 'Space' && !e.repeat && e.target.tagName !== 'INPUT') { e.preventDefault(); setBtn(true); } });
+document.addEventListener('keyup', e => { if (e.code === 'Space') setBtn(false); });
+
+// ---------- органы управления ----------
+$('usb').onclick = () => cmd({ usb: st.in.usb ? 0 : 1 });
+$('vbat').oninput = e => { $('vbatv').textContent = (e.target.value / 1000).toFixed(2) + ' В'; cmd({ vbat: e.target.value }); };
+$('pause').onclick = () => cmd({ pause: st.paused ? 0 : 1 });
+$('rate').onchange = e => cmd({ rate: e.target.value });
+$('rst').onclick = () => cmd({ reset: 'pin' });
+$('cold').onclick = () => cmd({ reset: 'cold' });
+$('phone').onclick = () => cmd({ phone: st.phone.enabled ? 0 : 1 });
+$('drop').onclick = () => cmd({ drop: 1 });
+$('tx').onclick = () => cmd({ tx: st.phone.tx ? 0 : 1 });
+$('ride').onclick = () => cmd({ ride: st.phone.ride ? 0 : 1 });
+$('interval').onchange = e => cmd({ interval: e.target.value });
+$('sendpkt').onclick = () => cmd({ packet: $('packet').value });
+$('shot').onclick = () => { const a = document.createElement('a'); a.download = 'imba_tv_' + Date.now() + '.png'; const c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(oled, 0, 0, 512, 256); a.href = c.toDataURL(); a.click(); };
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
+});
+
+const ranges = { speed: [0, 120, 0.1], pwm: [0, 100, 1], volt: [0, 151.2, 0.1], charge: [0, 100, 1], temp: [-20, 100, 0.1], trip: [0, 6553, 0.1], limit: [0, 100, 1] };
+function buildFields(fields) {
+  const box = $('fields'); box.innerHTML = '';
+  for (const f of fields) {
+    const r = document.createElement('div'); r.className = 'field-row';
+    const [mn, mx, step] = ranges[f.key] || [0, 1000, 0.1];
+    r.innerHTML = `<input type="checkbox" id="p_${f.key}"><label>${f.title}</label>` +
+      `<input type="number" id="n_${f.key}" step="${step}"><input type="range" id="r_${f.key}" min="${mn}" max="${mx}" step="${step}">`;
+    box.appendChild(r);
+    const send = v => cmd({ [f.key]: v });
+    r.querySelector('#p_' + f.key).onchange = e => send(e.target.checked ? $('n_' + f.key).value : '-');
+    r.querySelector('#n_' + f.key).onchange = e => send(e.target.value);
+    r.querySelector('#r_' + f.key).oninput = e => { $('n_' + f.key).value = e.target.value; send(e.target.value); };
+  }
+}
+function setIfIdle(el, v) { if (document.activeElement !== el) { if (el.type === 'checkbox') el.checked = v; else el.value = v; } }
+
+// ---------- отрисовка состояния ----------
+function kv(id, rows) { $(id).innerHTML = rows.map(([k, v]) => `<div>${k}</div><div>${v}</div>`).join(''); }
+const yn = v => v ? 'да' : 'нет';
+function chargeFromMv(mv) { return Math.max(0, Math.min(100, Math.round((mv - 3300) * 100 / 900))); }
+
+function render(s) {
+  const cpuText = { running: s.in_setup ? 'работает · setup()' : 'работает', off: 'System OFF', crashed: 'УПАЛА' }[s.cpu];
+  $('cpu').textContent = cpuText; $('cpu').className = 'badge ' + s.cpu;
+  $('clock').textContent = `t = ${s.t.toFixed(2)} с · загрузка #${s.boot} · ${s.reset_reason}` + (s.paused ? ' · ПАУЗА' : '');
+  $('crash').style.display = s.cpu === 'crashed' ? 'block' : 'none';
+  $('crash').textContent = 'Прошивка упала: ' + s.crash + '. Подробности в журнале. Нажмите RESET или «Перезапуск питания».';
+  $('pause').classList.toggle('on', !!s.paused); $('pause').textContent = s.paused ? 'Продолжить' : 'Пауза';
+  setIfIdle($('rate'), String(+s.rate));
+
+  drawOled(s.oled);
+  $('led').classList.toggle('lit', !!s.power.led);
+  $('pwren').classList.toggle('on', !!s.power.pwren);
+  $('sd').classList.toggle('on', !!s.power.sd);
+  $('blei').classList.toggle('on', !!(s.ble.conn || s.ble.adv));
+  $('bletext').textContent = s.ble.conn ? 'BLE: подключён' : (s.ble.adv ? 'BLE: реклама' : 'BLE: молчит');
+  $('usb').textContent = 'USB: ' + (s.in.usb ? 'подключён' : 'отключён'); $('usb').classList.toggle('on', !!s.in.usb);
+  setIfIdle($('vbat'), s.in.vbat); $('vbatv').textContent = (s.in.vbat / 1000).toFixed(2) + ' В';
+  $('vbatnote').textContent = `≈${chargeFromMv(s.in.vbat)}% по шкале прошивки (3.3–4.2 В); ниже 3.0 В выключается. Показание на экране меняется плавно: в прошивке фильтр АЦП.`;
+
+  const p = s.phone;
+  $('phone').classList.toggle('on', !!p.enabled); $('phone').textContent = p.enabled ? 'Телефон: включён' : 'Телефон: выключен';
+  $('tx').classList.toggle('on', !!p.tx); $('ride').classList.toggle('on', !!p.ride);
+  setIfIdle($('interval'), p.interval);
+  if (!$('fields').children.length) buildFields(p.fields);
+  for (const f of p.fields) {
+    setIfIdle($('p_' + f.key), !!f.present);
+    setIfIdle($('n_' + f.key), f.value);
+    setIfIdle($('r_' + f.key), f.value);
+  }
+  kv('blekv', [
+    ['реклама', yn(s.ble.adv)], ['подключение', yn(s.ble.conn)], ['подключений всего', s.ble.conns],
+    ['характеристика', s.ble.char ? 'запись разрешена' : 'не создана'], ['мощность передатчика', s.ble.txp + ' дБм'],
+    ['интервал соединения', s.ble.ci_min + '–' + s.ble.ci_max + ' мс'], ['реклама после разрыва', yn(s.ble.restart)],
+    ['принято пакетов', s.ble.rx], ['отклонено стеком', s.ble.rejected], ['номер кадра телефона', p.frame],
+  ]);
+
+  $('pins').innerHTML = s.pins.map(x => {
+    const lv = x.lvl < 0 ? '<span class="lvlz">Z</span>' : `<span class="lvl${x.lvl}">${x.lvl}</span>`;
+    return `<tr><td class="mono">D${x.n}</td><td class="mono">${x.nrf}</td><td>${x.fn}</td><td class="mono">${x.mode}</td>` +
+      `<td class="mono">${x.mode === 'OUTPUT' ? x.out : '–'}</td><td class="mono">${lv}</td></tr>`;
+  }).join('');
+
+  kv('cpukv', [
+    ['состояние', cpuText], ['причина сброса', s.reset_reason], ['время с загрузки', s.uptime.toFixed(2) + ' с'],
+    ['вызовов loop()', s.loops], ['последний loop()', s.cpu === 'running' ? (s.loop_age * 1000).toFixed(0) + ' мс назад' : '–'],
+    ['SoftDevice', s.power.sd ? 'включён' : 'выключен'], ['пробуждение по USB', yn(s.power.usbdetect)],
+  ]);
+  const o = s.oled;
+  kv('oledkv', [
+    ['питание', yn(o.powered)], ['дисплей (AE/AF)', o.on ? 'вкл' : 'выкл'], ['инверсия (A6/A7)', yn(o.inverted)],
+    ['все пиксели (A5)', yn(o.entire_on)], ['контраст', o.contrast], ['развёртка', (o.seg_remap ? 'A1' : 'A0') + ' / ' + (o.com_remap ? 'C8' : 'C0')],
+    ['начальная строка', o.start_line], ['указатель', 'страница ' + o.page + ', столбец ' + o.col],
+    ['байт данных', o.data_bytes], ['байт команд', o.cmd_bytes], ['неизвестных команд', o.unknown],
+  ]);
+  kv('i2ckv', [
+    ['Wire.begin', yn(s.i2c.begun)], ['частота', (s.i2c.clock / 1000) + ' кГц'], ['транзакций', s.i2c.txn],
+    ['байт', s.i2c.bytes], ['NACK', s.i2c.nack],
+  ]);
+  kv('adckv', [
+    ['опорное', (s.adc.ref_mv / 1000).toFixed(1) + ' В'], ['разрядность', s.adc.bits + ' бит'], ['последний отсчёт', s.adc.last],
+    ['= VDDH', (s.adc.last * 5 * s.adc.ref_mv / (1 << s.adc.bits) / 1000).toFixed(3) + ' В'], ['измерений', s.adc.reads],
+  ]);
+}
+
+// ---------- память ----------
+const hex2 = (h, i) => parseInt(h.substr(i * 2, 2), 16);
+function bytesOf(h) { const a = new Uint8Array(h.length / 2); for (let i = 0; i < a.length; i++) a[i] = hex2(h, i); return a; }
+function preview(sym, b) {
+  const dv = new DataView(b.buffer);
+  if (sym.name === 'euc_data' && b.length === 24) {
+    return `conn=${b[0]} speed=${dv.getUint16(2, true)} pwm=${b[4]} charge=${b[5]} limit=${b[6]} frame=${b[7]} ` +
+      `present=0x${b[8].toString(16)} U=${dv.getUint16(10, true) / 10} T=${dv.getInt16(12, true) / 10} trip=${dv.getUint16(14, true) / 10} ` +
+      `dt=${dv.getUint16(16, true)}мс last=${dv.getUint32(20, true)}`;
+  }
+  if (b.length === 1) return `${b[0]} (0x${b[0].toString(16).padStart(2, '0')})`;
+  if (b.length === 2) return `${dv.getUint16(0, true)} / ${dv.getInt16(0, true)}`;
+  if (b.length === 4) {
+    const f = dv.getFloat32(0, true);
+    return `${dv.getUint32(0, true)} / ${dv.getInt32(0, true)}` + (isFinite(f) && Math.abs(f) > 1e-6 && Math.abs(f) < 1e9 ? ` / ${+f.toPrecision(6)}f` : '');
+  }
+  if (b.length === 8) return `${dv.getBigUint64(0, true)}`;
+  return Array.from(b.slice(0, 12), x => x.toString(16).padStart(2, '0')).join(' ') + (b.length > 12 ? ' …' : '');
+}
+function dump(b, old) {
+  let s = '';
+  for (let i = 0; i < b.length; i += 16) {
+    let hx = '', asc = '';
+    for (let j = i; j < Math.min(i + 16, b.length); j++) {
+      const t = b[j].toString(16).padStart(2, '0');
+      hx += (old && old[j] !== b[j] ? `<span class="chg">${t}</span>` : t) + ' ';
+      asc += b[j] >= 32 && b[j] < 127 ? String.fromCharCode(b[j]).replace(/[<&]/g, c => c === '<' ? '&lt;' : '&amp;') : '.';
+    }
+    s += i.toString(16).padStart(4, '0') + '  ' + hx.padEnd(48) + ' ' + asc + '\n';
+  }
+  return s;
+}
+function drawPaged(canvas, b, w, h) {
+  const ctx = canvas.getContext('2d'), img = ctx.createImageData(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const lit = (b[(y >> 3) * w + x] >> (y & 7)) & 1, k = (y * w + x) * 4;
+    const edge = w === 132 && (x < 2 || x > 129);
+    img.data[k] = lit ? (edge ? 120 : 230) : (edge ? 30 : 0); img.data[k + 1] = lit ? (edge ? 120 : 240) : (edge ? 20 : 0);
+    img.data[k + 2] = lit ? (edge ? 120 : 255) : (edge ? 20 : 0); img.data[k + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+function renderMem(m) {
+  const flt = $('memfilter').value.toLowerCase();
+  const body = $('mem'); let html = '', total = 0;
+  const rows = [];
+  m.syms.forEach((sym, i) => {
+    total += sym.size;
+    if (flt && !(sym.name + ' ' + sym.file).toLowerCase().includes(flt)) return;
+    const b = bytesOf(sym.hex), old = prevMem[sym.name], changed = old && sym.hex !== old.hex;
+    const key = sym.file + ':' + sym.name;
+    html += `<tr class="memrow${changed ? ' changed' : ''}" data-k="${key}"><td class="mono">${sym.name.replace(/</g, '&lt;')}</td><td>${sym.file}</td>` +
+      `<td class="mono">${sym.size}</td><td class="mono">${preview(sym, b)}</td></tr>`;
+    if (openSyms.has(key)) {
+      html += `<tr><td colspan="4">` + (sym.size === 1024 ? `<canvas class="bmp" id="bmp${i}" width="128" height="64" style="width:384px;height:192px"></canvas>` : '') +
+        `<div class="dump">${dump(b, old && bytesOf(old.hex))}</div></td></tr>`;
+      rows.push([i, b, sym.size]);
+    }
+  });
+  body.innerHTML = html;
+  rows.forEach(([i, b, size]) => { if (size === 1024) drawPaged($('bmp' + i), b, 128, 64); });
+  body.querySelectorAll('.memrow').forEach(r => r.onclick = () => { const k = r.dataset.k; openSyms.has(k) ? openSyms.delete(k) : openSyms.add(k); renderMem(mem); });
+  $('memtotal').textContent = `${m.syms.length} переменных, ${total} байт ОЗУ`;
+  drawPaged($('gddram'), bytesOf(m.gddram), 132, 64);
+}
+
+// ---------- журнал ----------
+function addLog(line, cls) {
+  const el = document.createElement('div');
+  if (!cls) cls = line.includes('[fw]') ? 'fw' : line.includes('[emu]') ? 'emu' : line.includes('[script]') ? 'script' : 'board';
+  if (/УПАЛА|ERROR|AddressSanitizer|runtime error|ожидалось/.test(line)) cls = 'err';
+  el.className = cls; el.textContent = line; $('log').appendChild(el);
+  while ($('log').childNodes.length > 2000) $('log').firstChild.remove();
+  if ($('logfollow').checked) $('log').scrollTop = 1e9;
+}
+$('logclear').onclick = () => $('log').innerHTML = '';
+
+// ---------- опрос ----------
+async function loop(fn, ms) { for (;;) { try { await fn(); } catch (e) { } await new Promise(r => setTimeout(r, ms)); } }
+loop(async () => { st = await (await fetch('/api/state')).json(); render(st); }, 33);
+loop(async () => {
+  const j = await (await fetch('/api/log?since=' + logNext)).json();
+  j.lines.forEach(l => addLog(l)); logNext = j.next;
+}, 250);
+loop(async () => {
+  if (!$('tab-mem').classList.contains('active')) return;
+  const m = await (await fetch('/api/mem')).json();
+  if (mem) prevMem = Object.fromEntries(mem.syms.map(s => [s.name, s]));
+  mem = m; renderMem(m);
+}, 250);
+</script>
+</body>
+</html>

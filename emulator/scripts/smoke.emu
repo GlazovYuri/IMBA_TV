@@ -1,0 +1,83 @@
+# Базовый сценарий: включение, связь с телефоном, смена экранов, тревога ШИМ, выключение.
+# Время в wait - виртуальные миллисекунды.
+
+echo холодный старт: кнопка не нажата - плата сразу уходит в System OFF
+wait 300
+expect cpu=off
+
+echo удерживаем кнопку: пробуждение и включение (нужно держать > 500 мс)
+button=1
+wait 900
+expect cpu=running
+button=0
+wait 2500
+shot build/shot-intro.png
+
+echo телефон подключается и шлёт телеметрию
+wait 3000
+expect connected=1
+expect display=on
+shot build/shot-main.png
+
+echo короткое нажатие - экран с напряжением, ещё одно - сетка
+button=1
+wait 150
+button=0
+wait 300
+shot build/shot-voltage.png
+button=1
+wait 150
+button=0
+wait 2000
+shot build/shot-grid.png
+
+echo кривой пакет не должен ничего сломать
+packet=00112233
+packet=4c4501ff
+wait 200
+expect cpu=running
+
+echo обрыв связи и переподключение
+drop=1
+wait 300
+expect connected=0
+shot build/shot-nolink.png
+wait 2000
+expect connected=1
+
+echo ШИМ выше порога - мигание экрана
+pwm=95
+limit=80
+wait 1500
+expect cpu=running
+
+echo долгое нажатие - выключение
+button=1
+wait 1600
+button=0
+wait 1500
+expect cpu=off
+expect display=off
+
+echo USB будит плату; после пробуждения по USB плата работает и без кабеля
+usb=1
+wait 300
+expect cpu=running
+usb=0
+wait 3000
+expect cpu=running
+button=1
+wait 1600
+button=0
+wait 1500
+expect cpu=off
+
+echo разряд батареи до критического - плата выключается сама
+button=1
+wait 900
+button=0
+wait 3000
+expect cpu=running
+vbat=2.9
+wait 30000
+expect cpu=off
