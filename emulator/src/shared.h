@@ -9,7 +9,7 @@
 namespace emu
 {
 
-constexpr int kPins = 24;              // цифровые выводы платы (variant.h: PINS_COUNT)
+constexpr int kPins = 25;              // цифровые выводы платы (variant.h: PINS_COUNT)
 constexpr int kButtonPin = 0;          // utils.cpp: button_pin
 constexpr int kLedPin = 17;            // variant.h: PIN_LED
 constexpr int kPwrEnPin = 22;          // variant.h: PIN_PWREN

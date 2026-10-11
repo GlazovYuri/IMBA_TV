@@ -67,6 +67,14 @@ public:
   const char* sw_rev = "";
 };
 
+// сервис обновления по воздуху: эмулятор его только объявляет, само обновление не моделируется
+class BLEDfu : public BLEService
+{
+public:
+  BLEDfu();
+  void begin();
+};
+
 class BLEPeriph
 {
 public:

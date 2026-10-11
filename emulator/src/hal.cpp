@@ -206,6 +206,12 @@ uint32_t readResetReason()
   return board->reset_reason.load();
 }
 
+static_assert(PINS_COUNT == kPins, "kPins в shared.h должен совпадать с PINS_COUNT из variant.h");
+static_assert(LED_BLUE < PINS_COUNT, "LED_BLUE должен быть выводом платы");
+
+// ядро читает версию из регистра, который оставляет загрузчик; в эмуляторе загрузчика нет
+uint32_t bootloaderVersion = 0;
+
 void initVariant()
 {
   pinMode(PIN_LED, OUTPUT);
@@ -560,6 +566,17 @@ void BLEDis::begin()
   EMU_LOG("BLE DIS: %s / %s, hw %s, fw %s", manufacturer, model, hw_rev, fw_rev);
 }
 
+// UUID сервиса Nordic Legacy DFU: 00001530-1212-EFDE-1523-785FEABCD123
+static const uint8_t kDfuUuid[16] = {0x23, 0xD1, 0xBC, 0xEA, 0x5F, 0x78, 0x23, 0x15,
+                                     0xDE, 0xEF, 0x12, 0x12, 0x30, 0x15, 0x00, 0x00};
+
+BLEDfu::BLEDfu() : BLEService(kDfuUuid) {}
+
+void BLEDfu::begin()
+{
+  EMU_LOG("BLE DFU: сервис обновления объявлен (само обновление эмулятор не моделирует)");
+}
+
 void BLEPeriph::setConnIntervalMS(uint16_t min_ms, uint16_t max_ms)
 {
   board->ci_min_ms = min_ms;
@@ -667,11 +684,12 @@ static void* backgroundThread(void* arg)
     while(board->ble_q.pop(c)) handleBle(c);
 
     uint64_t now = nowUs();
-    // светодиод связи Bluefruit: мигает при рекламе, горит при подключении
+    // светодиод связи Bluefruit на выводе LED_BLUE: мигает при рекламе, горит при подключении.
+    // Как digitalWrite в ядре, меняется только выход; режим вывода Bluefruit не трогает
     if(board->sd_enabled && Bluefruit.auto_led)
     {
       bool led = board->connected ? true : (board->adv ? ((now / 500000) & 1) : false);
-      board->pin_out[kLedPin] = led;
+      board->pin_out[LED_BLUE] = led;
     }
 
     if(now >= next_snap)

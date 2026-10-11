@@ -1,7 +1,7 @@
 # Эмулятор платы IMBA TV: прошивка собирается под компьютер с моделью железа.
 #   make            - собрать
 #   make run        - собрать и открыть веб-интерфейс (http://localhost:8080)
-#   make test       - прогнать сценарий scripts/smoke.emu без интерфейса
+#   make test       - прогнать сценарии scripts/*.emu без интерфейса
 #   make SAN=1 ...  - собрать с AddressSanitizer/UBSan (ловит выход за границы массивов и т.п.)
 
 ROOT  := ..
@@ -62,7 +62,7 @@ run: $(BIN)
 	./$(BIN) --port $(PORT)
 
 test: $(BIN)
-	./$(BIN) --headless --rate 4 --script scripts/smoke.emu
+	for s in scripts/*.emu; do ./$(BIN) --headless --rate 4 --script $$s || exit 1; done
 
 clean:
 	rm -rf build build-san

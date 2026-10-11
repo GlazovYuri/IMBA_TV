@@ -108,5 +108,7 @@ void randomSeed(unsigned long seed);
 uint32_t readResetReason();
 void initVariant();
 
+extern uint32_t bootloaderVersion;
+
 #include "Print.h"
 #include "HardwareSerial.h"

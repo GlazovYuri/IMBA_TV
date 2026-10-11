@@ -717,7 +717,8 @@ static const char* pinModeName(uint8_t m)
 
 static const char* nrfPin[kPins] = {"P0.08", "P0.06", "P0.17", "P0.20", "P0.22", "P0.24", "P1.00", "P0.11",
                                     "P1.04", "P1.06", "P0.09", "P1.01", "P1.02", "P1.07", "P1.11", "P1.13",
-                                    "P0.10", "P0.15", "P1.15", "P0.02", "P0.29", "P0.31", "P0.13", "P0.04"};
+                                    "P0.10", "P0.15", "P1.15", "P0.02", "P0.29", "P0.31", "P0.13", "P0.04",
+                                    "P0.27"};
 
 static const char* pinFunction(int p)
 {
@@ -729,6 +730,7 @@ static const char* pinFunction(int p)
     case 21: return "SCL дисплея";
     case 22: return "PWREN (питание дисплея)";
     case 23: return "A2 / VBAT";
+    case 24: return "LED_BLUE (никуда не подключён)";
     case 1: return "RX";
     default: return "";
   }
