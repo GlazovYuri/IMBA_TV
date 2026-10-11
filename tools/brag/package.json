@@ -1,0 +1,13 @@
+{
+  "name": "imba-tv-brag",
+  "private": true,
+  "description": "Видео о проекте: кадры экрана из кода прошивки, сайт, 3D-корпус, музыка",
+  "type": "module",
+  "scripts": {
+    "video": "node make.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "24.43.1",
+    "three": "0.170.0"
+  }
+}

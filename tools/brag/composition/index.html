@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IMBA TV</title>
+<link rel="stylesheet" href="/web/style.css">
+<link rel="stylesheet" href="comp.css">
+<script type="importmap">{"imports": {"three": "/three/build/three.module.js", "three/addons/": "/three/examples/jsm/"}}</script>
+<script src="/work/oled-data.js"></script>
+</head>
+<body>
+<div id="sprite"></div>
+<div id="stage">
+  <!-- вступление: 3D-корпус влетает, включается, камера уходит в экран -->
+  <canvas id="three" width="1920" height="1080"></canvas>
+
+  <!-- Листы руководства. Экран (oled-main) рисуется поверх в координатах кадра -->
+  <div id="page">
+    <div id="fig" class="v-screen"></div>
+    <p id="fig-cap" class="v-cap"></p>
+
+    <div id="title" class="grp">
+      <h1 class="v-h1">IMBA TV</h1>
+      <p class="v-lede">Экранчик для моноколеса</p>
+      <p class="v-sub">Показывает скорость, ШИМ и&nbsp;заряд колеса, мигает при&nbsp;превышении ШИМ</p>
+    </div>
+
+    <div id="link" class="grp">
+      <h2 class="v-h2">Работает через приложение LoEUC</h2>
+      <svg id="link-svg" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
+      <p class="v-node" id="node-wheel">Моноколесо</p>
+      <p class="v-node" id="node-phone">LoEUC на&nbsp;телефоне</p>
+      <p class="v-cap" id="link-cap"><b>Рис. 2.</b> Данные идут с&nbsp;колеса через телефон, всё по&nbsp;Bluetooth</p>
+    </div>
+
+    <div id="open" class="grp">
+      <h2 class="v-h2">Всё в&nbsp;открытом доступе</h2>
+      <div class="v-rows">
+        <div class="v-row"><p class="v-row-k">Исходники прошивки и&nbsp;сайта</p><p class="v-row-v">github.com/GlazovYuri/IMBA_TV</p></div>
+        <div class="v-row"><p class="v-row-k">Модели корпуса и&nbsp;инструкция по&nbsp;сборке</p><p class="v-row-v">t.me/IMBA_project</p></div>
+      </div>
+      <div class="v-repo">
+        <div class="v-repo-head"><span class="v-repo-title">Репозиторий</span><span class="v-repo-url">GlazovYuri/IMBA_TV</span></div>
+        <ol class="v-repo-list">
+          <li><span class="v-repo-name">IMBA_TV/</span><span class="v-repo-note">Прошивка для Arduino IDE</span></li>
+          <li><span class="v-repo-name">web/</span><span class="v-repo-note">Сайт: прошивка и&nbsp;настройка</span></li>
+          <li><span class="v-repo-name">boards/</span><span class="v-repo-note">Плата nRF52840 ProMicro</span></li>
+          <li><span class="v-repo-name">tools/</span><span class="v-repo-note">Превью анимаций и&nbsp;настроек</span></li>
+          <li><span class="v-repo-name">.github/</span><span class="v-repo-note">Сборка релизов</span></li>
+          <li><span class="v-repo-name">README.md</span><span class="v-repo-note">Инструкция</span></li>
+          <li><span class="v-repo-name">LICENSE</span><span class="v-repo-note">MIT</span></li>
+        </ol>
+      </div>
+      <p class="v-cap" id="open-cap"><b>Рис. 3.</b> Что лежит в&nbsp;репозитории</p>
+    </div>
+
+    <h2 id="screen-head" class="v-h2">Всё важное на&nbsp;одном экране</h2>
+    <div id="alarm-callout" class="v-zoom">
+      <div class="callout callout-caution" data-label="Внимание">
+        <p>ШИМ у&nbsp;порога: экран мигает. Чем выше ШИМ, тем чаще.</p>
+      </div>
+    </div>
+    <div id="alarm-chart">
+      <svg id="chart" width="1680" height="192" viewBox="0 0 1680 192"></svg>
+      <p class="v-cap v-cap-chart"><b>Рис. 5.</b> ШИМ и&nbsp;мигание экрана, порог из&nbsp;LoEUC</p>
+    </div>
+
+    <div id="end" class="grp">
+      <h1 class="v-h1 v-h1-end">IMBA TV</h1>
+      <div class="v-rows v-rows-end">
+        <div class="v-row"><p class="v-row-k">Прошивка и&nbsp;настройка</p><p class="v-row-v">glazovyuri.github.io/IMBA_TV</p></div>
+        <div class="v-row"><p class="v-row-k">Исходный код</p><p class="v-row-v">github.com/GlazovYuri/IMBA_TV</p></div>
+        <div class="v-row"><p class="v-row-k">Модели корпуса и&nbsp;сборка</p><p class="v-row-v">t.me/IMBA_project</p></div>
+      </div>
+    </div>
+  </div>
+  <canvas id="oled-main"></canvas>
+  <!-- выноски поверх экрана: жёлтые линии идут по самому экрану -->
+  <div id="page-top">
+    <svg id="leaders" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
+    <div class="v-label" id="lb1"><span class="v-code">1</span>Заряд дисплея</div>
+    <div class="v-label" id="lb2"><span class="v-code">2</span>Заряд колеса</div>
+    <div class="v-label" id="lb3"><span class="v-code">3</span>Скорость</div>
+    <div class="v-label" id="lb4"><span class="v-code">4</span>ШИМ</div>
+  </div>
+
+  <div id="anims">
+    <h2 class="v-h2">Анимации на&nbsp;выбор</h2>
+    <p class="v-sub2">Включаются галочками в&nbsp;настройках на&nbsp;сайте</p>
+  </div>
+
+  <!-- Окно браузера: редактор экранов (снимки сайта) и прошивка (разметка сайта) -->
+  <div id="browser">
+    <div class="v-bar">
+      <span class="v-nav"><svg class="icon"><use href="#i-chevron"/></svg><svg class="icon"><use href="#i-chevron"/></svg></span>
+      <span class="v-url"><svg viewBox="0 0 24 24" class="v-lock"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg>glazovyuri.github.io/IMBA_TV</span>
+    </div>
+    <div id="viewport">
+      <div id="editor">
+        <img data-state="list" src="/work/site/editor-list.png">
+        <img data-state="dialog" src="/work/site/editor-dialog.png">
+        <img data-state="zone" src="/work/site/editor-zone.png">
+        <img data-state="temp" src="/work/site/editor-temp.png">
+        <img data-state="done" src="/work/site/editor-done.png">
+      </div>
+      <div id="site"><main></main></div>
+    </div>
+    <span id="fast" class="v-fast">Время ускорено</span>
+  </div>
+
+  <div id="side">
+    <h2 class="v-h2" id="side-head"></h2>
+    <p class="v-sub2" id="side-sub"></p>
+  </div>
+  <div id="inset" class="v-screen"></div>
+  <p id="inset-cap" class="v-cap"></p>
+  <canvas id="oled-inset"></canvas>
+
+  <!-- Колонтитулы руководства -->
+  <header id="runhead" class="v-runhead">
+    <span class="v-rh-name">IMBA TV</span>
+    <span class="v-rh-doc">Руководство</span>
+    <span class="v-rh-section" id="rh-sec"></span>
+    <span class="v-rh-rev">Ред. <b id="rh-rev">v0.6.0</b></span>
+  </header>
+  <footer id="foot" class="v-foot">
+    <span>glazovyuri.github.io/IMBA_TV</span>
+    <span>Стр. <b id="page-n">1</b></span>
+  </footer>
+
+  <svg id="cursor" viewBox="0 0 28 36" width="42" height="54"><path d="M2 2 L2 28 L9 21.5 L13.5 32 L18 30 L13.6 19.8 L23 19.8 Z" fill="#1d1d1b" stroke="#f3f2ed" stroke-width="2.2" stroke-linejoin="round"/></svg>
+  <div id="dip"></div>
+</div>
+<script type="module" src="comp.js"></script>
+</body>
+</html>

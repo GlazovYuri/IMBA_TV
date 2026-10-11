@@ -1,0 +1,157 @@
+/* Композиция видео: листы 1920×1080 в стилях сайта IMBA TV */
+
+*, *::before, *::after { animation: none !important; transition: none !important; }
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); }
+body { -webkit-font-smoothing: antialiased; }
+#sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); }
+#stage > * { position: absolute; }
+#three { left: 0; top: 0; width: 1920px; height: 1080px; }
+
+/* ---------- колонтитулы ---------- */
+.v-runhead {
+  left: 0; top: 0; width: 1920px; height: 66px;
+  display: flex; align-items: center; gap: 26px;
+  padding: 0 64px;
+  background: var(--paper);
+  border-bottom: 2px solid var(--ink);
+  font: 600 21px/1 var(--cond); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
+}
+.v-rh-name { font-weight: 800; letter-spacing: 0.1em; }
+.v-rh-doc { color: var(--ink-2); }
+.v-rh-section { margin-left: auto; color: var(--ink-2); }
+.v-rh-rev { padding-left: 26px; border-left: 1px solid var(--hair); }
+.v-rh-rev b { font: 600 20px/1 var(--mono); letter-spacing: 0; text-transform: none; }
+.v-foot {
+  left: 64px; top: 1014px; width: 1792px; height: 66px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-top: 3px solid var(--ink);
+  color: var(--ink-2); font: 500 20px/1 var(--mono);
+}
+.v-foot b { color: var(--ink); font-weight: 600; }
+
+/* ---------- типографика ---------- */
+.v-h1 { margin: 0; font: 800 220px/0.86 var(--cond); letter-spacing: -0.02em; color: var(--ink); }
+.v-h2 { margin: 0; font: 800 66px/1.02 var(--cond); letter-spacing: -0.01em; color: var(--ink); white-space: nowrap; }
+.v-lede { margin: 0; font: 600 60px/1.1 var(--sans); letter-spacing: -0.01em; color: var(--ink); }
+.v-sub { margin: 0; font: 400 38px/1.3 var(--sans); color: var(--ink-2); }
+.v-sub2 { margin: 0; font: 400 36px/1.3 var(--sans); color: var(--ink-2); }
+.v-cap { margin: 0; color: var(--ink-2); font: 400 26px/1.35 var(--sans); white-space: nowrap; }
+.v-cap b { color: var(--ink); font-weight: 700; }
+
+/* рамка экрана как .screen на сайте: двойная линейка */
+.v-screen {
+  background: var(--oled);
+  border: 3px solid var(--ink);
+  outline: 1.5px solid var(--ink);
+  outline-offset: 9px;
+}
+
+/* ---------- лист ---------- */
+#page, #page-top { left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+#page > *, #page-top > *, .grp > * { position: absolute; margin: 0; }
+.grp { left: 0; top: 0; width: 1920px; height: 1080px; }
+
+#title .v-h1 { left: 120px; top: 272px; }
+#title .v-lede { left: 124px; top: 500px; width: 840px; }
+#title .v-sub { left: 124px; top: 588px; width: 760px; }
+
+#link .v-h2 { left: 120px; top: 130px; }
+#link-svg { left: 0; top: 0; overflow: visible; }
+.v-node { font: 800 34px/1.15 var(--cond); color: var(--ink); text-align: center; width: 360px; }
+#link-cap { left: 120px; top: 902px; }
+
+#open .v-h2 { left: 120px; top: 150px; }
+.v-rows { left: 120px; top: 300px; width: 760px; border-top: 3px solid var(--ink); }
+.v-row { position: relative; padding: 22px 0 24px; border-bottom: 1px solid var(--hair); }
+.v-row-k { margin: 0 0 10px; color: var(--ink-2); font: 700 24px/1.2 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; }
+.v-row-v { margin: 0; font: 600 40px/1.15 var(--mono); letter-spacing: -0.01em; color: var(--ink); }
+.v-repo { left: 1000px; top: 150px; width: 800px; border: 2px solid var(--ink); background: var(--paper); }
+.v-repo-head { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 20px 12px; border-bottom: 2px solid var(--ink); background: var(--paper-2); }
+.v-repo-title { font: 800 22px/1.2 var(--cond); letter-spacing: 0.1em; text-transform: uppercase; }
+.v-repo-url { color: var(--ink-2); font: 500 22px/1.2 var(--mono); }
+.v-repo-list { margin: 0; padding: 6px 20px; list-style: none; }
+.v-repo-list li { display: grid; grid-template-columns: 200px 1fr; align-items: baseline; gap: 18px; padding: 16px 0; border-bottom: 1px dotted var(--hair); }
+.v-repo-list li:last-child { border-bottom: 0; }
+.v-repo-name { font: 600 28px/1.2 var(--mono); color: var(--ink); }
+.v-repo-note { font: 400 28px/1.25 var(--sans); color: var(--ink-2); }
+#open-cap { left: 1000px; top: 902px; }
+
+#screen-head { left: 120px; top: 120px; }
+#leaders { left: 0; top: 0; overflow: visible; }
+.v-label { display: flex; align-items: center; gap: 14px; font: 800 44px/1 var(--cond); white-space: nowrap; }
+.v-code {
+  display: inline-grid; place-items: center;
+  min-width: 42px; height: 42px; padding: 2px 8px 0;
+  border: 2px solid currentColor;
+  font: 800 26px/1 var(--cond);
+}
+.v-zoom { zoom: 2.35; }
+#alarm-callout .callout { margin: 0; max-width: none; width: 290px; padding-bottom: 16px; }
+#alarm-callout .callout p { font: 600 19px/1.32 var(--sans); }
+#alarm-chart { left: 120px; top: 752px; width: 1680px; }
+#chart { display: block; overflow: visible; }
+.v-cap-chart { margin-top: 10px !important; position: static !important; font-size: 22px; }
+
+.v-h1-end { left: 1030px; top: 236px; font-size: 168px; }
+.v-rows-end { left: 1034px; top: 420px; width: 780px; }
+.v-rows-end .v-row-v { font-size: 36px; }
+
+/* ---------- анимации ---------- */
+#anims { left: 0; top: 0; width: 1920px; height: 1080px; }
+#anims > * { position: absolute; margin: 0; }
+#anims .v-h2 { left: 120px; top: 110px; }
+#anims .v-sub2 { left: 122px; top: 192px; }
+.v-tile-cap { font: 800 34px/1 var(--cond); color: var(--ink); }
+.v-tile-cap b { display: inline-grid; place-items: center; min-width: 36px; height: 36px; margin-right: 12px; border: 2px solid currentColor; font: 800 22px/1 var(--cond); vertical-align: -2px; }
+
+/* ---------- окно браузера ---------- */
+#browser {
+  left: 60px; top: 1100px; width: 1180px; height: 910px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  outline: 1.5px solid var(--ink);
+  outline-offset: 9px;
+}
+.v-bar {
+  position: absolute; left: 0; top: 0; right: 0; height: 62px;
+  display: flex; align-items: center; gap: 18px; padding: 0 18px;
+  background: var(--paper-2);
+  border-bottom: 2px solid var(--ink);
+}
+.v-nav { display: flex; gap: 6px; color: var(--ink-3); }
+.v-nav .icon { width: 26px; height: 26px; }
+.v-nav .icon:first-child { transform: rotate(90deg); }
+.v-nav .icon:last-child { transform: rotate(-90deg); }
+.v-url {
+  display: flex; align-items: center; gap: 12px;
+  height: 40px; padding: 0 18px;
+  border: 1.5px solid var(--hair); background: var(--paper);
+  font: 500 23px/1 var(--mono); color: var(--ink);
+}
+.v-lock { width: 20px; height: 20px; fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#viewport { position: absolute; left: 0; top: 62px; right: 0; bottom: 0; overflow: hidden; background: var(--paper); }
+#editor { position: absolute; left: 0; top: 0; width: 1100px; height: 900px; transform-origin: 0 0; }
+#editor img { position: absolute; left: 0; top: 0; width: 1100px; height: 900px; opacity: 0; }
+#site { position: absolute; left: 0; top: 0; width: 1280px; transform-origin: 0 0; background: var(--paper); }
+#site main { padding-bottom: 600px; }
+#site .op-num { position: static; }
+.v-fast {
+  position: absolute; right: 22px; top: 84px;
+  padding: 8px 12px 7px; border: 2px solid var(--ink); background: var(--caution);
+  font: 800 20px/1 var(--cond); letter-spacing: 0.1em; text-transform: uppercase;
+  opacity: 0;
+}
+
+#side { left: 0; top: 0; width: 1920px; height: 1080px; }
+#side > * { position: absolute; margin: 0; }
+#side-head { left: 1310px; top: 136px; width: 560px; white-space: normal; }
+#side-sub { left: 1312px; top: 222px; width: 560px; font-size: 32px; }
+#inset-cap { width: 560px; white-space: normal; font-size: 24px; }
+
+#cursor { left: 0; top: 0; opacity: 0; transform-origin: 2px 2px; }
+#dip { left: 0; top: 0; width: 1920px; height: 1080px; background: var(--paper); opacity: 0; pointer-events: none; }
+
+/* id сайта получили префикс s-, правило для процентов прогресса повторено */
+#s-progress-text { display: block; font: 800 34px/1 var(--cond); font-variant-numeric: tabular-nums; }
