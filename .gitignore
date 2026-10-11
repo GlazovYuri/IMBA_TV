@@ -1,2 +1,5 @@
 tools/explosion/src_old/particles.png
 tools/explosion/src_destroy/
+emulator/build/
+emulator/build-san/
+emulator/.deps/
