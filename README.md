@@ -1,3 +1,5 @@
+[![Видео о проекте IMBA TV](web/media/imba-tv.jpg)](https://glazovyuri.github.io/IMBA_TV/media/imba-tv.mp4)
+
 # Дисплей для отображения телеметрии моноколеса
 Дисплей подключается к телефону через программу [LoEUC](https://loeuc.ru/ru/#download) и отображает наиболее важные данные:
 * Скорость движения
