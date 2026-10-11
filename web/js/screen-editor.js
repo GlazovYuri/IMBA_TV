@@ -90,6 +90,18 @@ export function describeScreens(slots, values) {
     .join('; ');
 }
 
+// Рамка места на экране: зажжённые им точки с отступом, в пределах экрана; без точек - место целиком
+const ZONE_PAD = 2;
+export function zoneBox(box, [x, y, w, h]) {
+  if (!box) return [x, y, x + w - 1, y + h - 1];
+  return [
+    Math.max(box[0] - ZONE_PAD, 0),
+    Math.max(box[1] - ZONE_PAD, 0),
+    Math.min(box[2] + ZONE_PAD, 127),
+    Math.min(box[3] + ZONE_PAD, 63),
+  ];
+}
+
 // ---------- Разметка ----------
 
 function el(tag, className, text) {
@@ -163,6 +175,20 @@ export function createScreenEditor({ slots, values, options, onChange, isBusy })
 
   let editing = -1;  // номер экрана в окне
   let slot = 0;  // выбранное место на нём
+  // экран в окне увеличен в целое число раз: точки дисплея и рамки мест ложатся на сетку пикселей
+  let scale = 4;
+
+  function fitScale() {
+    // экран стоит по центру, поля окна - как у подсказки под ним
+    const style = getComputedStyle(stage);
+    const gutter = parseFloat(getComputedStyle(hint).marginLeft);
+    const frame = 2 * gutter + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) +
+      parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+    return Math.max(1, Math.min(4, Math.floor((dialog.clientWidth - frame) / 128)));
+  }
+  new ResizeObserver(() => {
+    if (dialog.open && fitScale() !== scale) renderEditor();
+  }).observe(dialog);
 
   close.addEventListener('click', () => dialog.close());
   done.addEventListener('click', () => dialog.close());
@@ -176,8 +202,9 @@ export function createScreenEditor({ slots, values, options, onChange, isBusy })
   function openEditor(index) {
     editing = index;
     slot = 0;
-    renderEditor();
     dialog.showModal();
+    // масштаб считается по ширине открытого окна
+    renderEditor();
     zones.querySelector('[aria-pressed="true"]')?.focus();
   }
 
@@ -189,17 +216,22 @@ export function createScreenEditor({ slots, values, options, onChange, isBusy })
       return;
     }
     title.textContent = `Экран ${editing + 1} · ${info.name}`;
-    draw(big, screen);
+    const oled = renderScreen(screen, options());
+    paint(big, oled);
+    scale = dialog.open ? fitScale() : scale;
+    big.style.width = `${128 * scale}px`;
+    big.style.height = `${64 * scale}px`;
     const shown = normalizeScreen(screen).v;
 
     zones.replaceChildren(...info.slots.map((s, i) => {
-      const [x, y, w, h] = s.zone;
+      // рамка по точкам, которые рисует это место, с отступом в 2 точки дисплея
+      const [x0, y0, x1, y1] = zoneBox(oled.boxes.get(i), s.zone);
       const zone = el('button', 'screen-zone');
       zone.type = 'button';
-      zone.style.left = `${(x / 128) * 100}%`;
-      zone.style.top = `${(y / 64) * 100}%`;
-      zone.style.width = `${(w / 128) * 100}%`;
-      zone.style.height = `${(h / 64) * 100}%`;
+      zone.style.left = `${x0 * scale}px`;
+      zone.style.top = `${y0 * scale}px`;
+      zone.style.width = `${(x1 - x0 + 1) * scale}px`;
+      zone.style.height = `${(y1 - y0 + 1) * scale}px`;
       zone.setAttribute('aria-pressed', String(i === slot));
       zone.setAttribute('aria-label', `${s.label}: ${VALUE_NAMES[shown[i]]}`);
       zone.title = s.label;

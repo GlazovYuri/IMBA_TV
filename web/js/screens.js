@@ -192,7 +192,7 @@ function drawEucVoltage(oled, x, y, d, wheelVoltage) {
   oled.print('В');
 }
 
-const BIG_LABELS = { [VALUE.SPEED]: 'скорость', [VALUE.PWM]: 'ШИМ', [VALUE.TEMPERATURE]: 'температура' };
+const BIG_LABELS = { [VALUE.SPEED]: 'скорость', [VALUE.PWM]: 'ШИМ', [VALUE.TEMPERATURE]: 'темп' };
 
 function centerX(center2, width, left, right) {
   return constrain(div(center2 - width + 2, 2), left, right - width + 1);
@@ -216,12 +216,17 @@ function drawBigValue(oled, left, right, center2, y, value, d) {
   oled.print(label);
 }
 
+// oled.tag - номер места на экране (как поля v1..v4): по нему редактор обводит то, что место рисует
 function mainDraw(oled, devCharge, isCharging, d, [top, left, right], wheelVoltage) {
   drawDevCharge(oled, 0, 1, devCharge, isCharging);
+  oled.tag = 0;
   if (top === VALUE.VOLTAGE) drawEucVoltage(oled, 47, 1, d, wheelVoltage);
   else drawEucCharge(oled, 47, 1, d.charge);
+  oled.tag = 1;
   drawBigValue(oled, 0, 71, 67, 18, left, d);
+  oled.tag = 2;
   drawBigValue(oled, 72, WIDTH - 1, 187, 18, right, d);
+  oled.tag = null;
 }
 
 function noLinkDraw(oled, devCharge, isCharging) {
@@ -284,8 +289,10 @@ function gridDraw(oled, d, values, wheelVoltage) {
     const width = bigWidth(text);
     let c = cells[i].fitText ? placeLeft(width) : cells[i];
     if (c.right - width + 1 < 3) c = placeLeft(width);
+    oled.tag = i;
     textBig(oled, c.right, y, text);
     drawUnit(oled, c.unitX, y, values[i]);
+    oled.tag = null;
   }
 }
 
@@ -330,7 +337,8 @@ function infoDraw(oled, d, linkOk, firmware, bootloader) {
 
 // ---------- display.cpp ----------
 
-// Кадр экрана { type, v: [4 значения] } как на дисплее
+// Кадр экрана { type, v: [4 значения] } как на дисплее. В oled.boxes - рамки настраиваемых мест:
+// номер места -> [x0, y0, x1, y1] зажжённых им точек
 export function renderScreen(screen, {
   data = SAMPLE,
   devCharge = SAMPLE_DEV_CHARGE,
