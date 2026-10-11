@@ -132,6 +132,7 @@ static euc_data_t sampleData()
   d.trip_x10 = 124;
   d.present = EUC_HAS_SPEED | EUC_HAS_PWM | EUC_HAS_VOLTAGE | EUC_HAS_CHARGE | EUC_HAS_TEMPERATURE | EUC_HAS_TRIP;
   d.frame_interval_ms = 120;
+  d.frame_last_interval_ms = 95;
   d.last_frame_ms = 0;
   return d;
 }
@@ -145,6 +146,109 @@ static void begin()
   displaySetBrightness(100);
   displayClear();
   frames.clear();
+}
+
+// ===== Экраны для редактора на сайте =====
+// Сайт рисует экраны своим кодом (web/js/screens.js). Здесь те же экраны снимает настоящий код прошивки,
+// тест сайта сверяет с ними свою отрисовку. Запись: параметры экрана и данные, затем 1024 байта памяти
+// дисплея (страница за страницей, столбцы 0..127)
+
+static fw_config_t& configMut() { return const_cast<fw_config_t&>(config()); }
+
+static euc_data_t wideData()
+{
+  euc_data_t d = sampleData();
+  d.speed = 123;
+  d.pwm = 100;
+  d.charge = 100;
+  d.voltage_x10 = 1512;
+  d.temperature_x10 = -153;
+  d.trip_x10 = 9999;
+  return d;
+}
+
+static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t wheel, euc_data_t d, uint8_t dev, bool charging)
+{
+  fw_config_t& cfg = configMut();
+  cfg.screen1_type = type;
+  cfg.screen1_v1 = v[0];
+  cfg.screen1_v2 = v[1];
+  cfg.screen1_v3 = v[2];
+  cfg.screen1_v4 = v[3];
+  cfg.screen2_type = cfg.screen3_type = cfg.screen4_type = cfg.screen5_type = 0;
+  cfg.wheel_voltage_x10 = wheel;
+  displayInit();
+  d.last_frame_ms = millis() - 10;  // кадр от телефона только что пришёл
+  displayDrawIface(dev, charging, d);
+  frames.clear();
+
+  uint8_t head[32];
+  int n = 0;
+  head[n++] = type;
+  for(int i = 0; i < 4; i++) head[n++] = v[i];
+  head[n++] = wheel & 0xFF; head[n++] = wheel >> 8;
+  head[n++] = dev;
+  head[n++] = charging;
+  head[n++] = d.is_connected;
+  head[n++] = d.present;
+  head[n++] = d.speed & 0xFF; head[n++] = d.speed >> 8;
+  head[n++] = d.pwm;
+  head[n++] = d.charge;
+  head[n++] = d.voltage_x10 & 0xFF; head[n++] = d.voltage_x10 >> 8;
+  head[n++] = (uint16_t)d.temperature_x10 & 0xFF; head[n++] = (uint16_t)d.temperature_x10 >> 8;
+  head[n++] = d.trip_x10 & 0xFF; head[n++] = d.trip_x10 >> 8;
+  head[n++] = d.frame_interval_ms & 0xFF; head[n++] = d.frame_interval_ms >> 8;
+  head[n++] = d.frame_last_interval_ms & 0xFF; head[n++] = d.frame_last_interval_ms >> 8;
+  fwrite(head, 1, n, f);
+  for(int page = 0; page < 8; page++) fwrite(&ram[page][2], 1, 128, f);
+}
+
+static void saveScreens(const char* path)
+{
+  FILE* f = fopen(path, "wb");
+  if(!f) { perror(path); exit(1); }
+  const uint16_t wheels[3] = {840, 1008, 1512};
+  euc_data_t sample = sampleData(), wide = wideData(), none = sampleData(), trip = sampleData();
+  none.present = 0;
+  trip.trip_x10 = 1234;
+  trip.speed = 103;
+
+  // два значения: все сочетания, у каждого обычные и самые широкие данные
+  const uint8_t big[3] = {0, 1, 4};
+  for(int top = 2; top <= 3; top++)
+    for(int l = 0; l < 3; l++)
+      for(int r = 0; r < 3; r++)
+      {
+        uint8_t v[4] = {(uint8_t)top, big[l], big[r], 5};
+        writeScreen(f, 1, v, 1512, sample, 82, false);
+        writeScreen(f, 1, v, wheels[(l + r) % 3], wide, 100, (l + r) % 2);
+      }
+  const uint8_t main_default[4] = {2, 0, 1, 5};
+  writeScreen(f, 1, main_default, 1512, none, 5, false);
+
+  // сетка: все пары в верхней строке при разных нижних, так проходят все варианты разметки
+  uint32_t rnd = 0x1234567u;
+  for(int a = 0; a < 6; a++)
+    for(int b = 0; b < 6; b++)
+    {
+      rnd = rnd * 1103515245u + 12345u;
+      uint8_t v[4] = {(uint8_t)a, (uint8_t)b, (uint8_t)((rnd >> 16) % 6), (uint8_t)((rnd >> 20) % 6)};
+      euc_data_t d = (a + b) % 3 == 0 ? wide : ((a + b) % 3 == 1 ? sample : trip);
+      writeScreen(f, 2, v, wheels[(a * 6 + b) % 3], d, 82, false);
+    }
+  const uint8_t grid_default[4] = {2, 3, 4, 5};
+  writeScreen(f, 2, grid_default, 1512, none, 82, false);
+
+  // связь и версии
+  writeScreen(f, 3, grid_default, 1512, sample, 82, false);
+  euc_data_t slow = sampleData();
+  slow.frame_interval_ms = 2400;
+  slow.frame_last_interval_ms = 1840;
+  writeScreen(f, 3, grid_default, 1512, slow, 82, false);
+  euc_data_t off = sampleData();
+  off.is_connected = false;
+  writeScreen(f, 3, grid_default, 1512, off, 82, false);
+  fclose(f);
 }
 
 int main(int argc, char** argv)
@@ -182,5 +286,7 @@ int main(int argc, char** argv)
   displayPowerOffAnimation(dev_charge, false, d);
   delay(900);
   save((out + "/poweroff.bin").c_str());
+
+  saveScreens((out + "/screens.bin").c_str());
   return 0;
 }

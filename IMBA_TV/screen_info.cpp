@@ -37,16 +37,16 @@ void screenInfoDraw(euc_data_t& data)
   const int bootloader_y = 50;
   char text[12];
 
-  // задержка: среднее время между кадрами от телефона, "--" если кадров нет дольше link_stall_ms
+  // задержка: время между двумя последними кадрами от телефона, "--" если кадров нет дольше link_stall_ms
   bool link_ok = data.is_connected && data.frame_interval_ms != 0 && (millis() - data.last_frame_ms) < link_stall_ms;
 
   // до секунды - в мс, дальше - в секундах с десятыми
   const char* interval_unit = "мс";
   if(!link_ok) snprintf(text, sizeof(text), "--");
-  else if(data.frame_interval_ms < 1000) snprintf(text, sizeof(text), "%u", (unsigned)data.frame_interval_ms);
+  else if(data.frame_last_interval_ms < 1000) snprintf(text, sizeof(text), "%u", (unsigned)data.frame_last_interval_ms);
   else
   {
-    unsigned s_x10 = (data.frame_interval_ms + 50) / 100;
+    unsigned s_x10 = (data.frame_last_interval_ms + 50) / 100;
     if(s_x10 > 999) s_x10 = 999;
     snprintf(text, sizeof(text), "%u.%u", s_x10 / 10, s_x10 % 10);
     interval_unit = "с";
@@ -54,7 +54,7 @@ void screenInfoDraw(euc_data_t& data)
   screenTextBig(left_right, value_y, text);
   screenTextUnit(left_unit, value_y, interval_unit);
 
-  // частота прихода кадров
+  // частота прихода кадров: по среднему времени между ними
   if(link_ok)
   {
     uint32_t hz_x10 = (10000UL + data.frame_interval_ms / 2) / data.frame_interval_ms;
