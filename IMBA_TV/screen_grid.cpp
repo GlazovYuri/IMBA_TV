@@ -91,11 +91,8 @@ static bool fits(const cell_t& left, int left_unit_width, const cell_t& right, i
   return right_first - left_last - 1 >= column_gap;
 }
 
-void screenGridDraw(euc_data_t& data)
+void screenGridDraw(euc_data_t& data, const uint8_t values[4])
 {
-  // клетки по строкам: слева сверху, справа сверху, слева снизу, справа снизу
-  const fw_config_t& cfg = config();
-  const uint8_t values[4] = {cfg.grid_1, cfg.grid_2, cfg.grid_3, cfg.grid_4};
   const int row_y[2] = {7, 37};
 
   int number_w[4], unit_w[4];
@@ -130,7 +127,10 @@ void screenGridDraw(euc_data_t& data)
     bool crowded = cells[i & ~1].fit_text;
     if(crowded && values[i] == EUC_VALUE_TRIP && (data.present & EUC_HAS_TRIP) && data.trip_x10 >= 1000)
       snprintf(text, sizeof(text), "%u", data.trip_x10 / 10);
-    cell_t c = cells[i].fit_text ? placeLeft(screenTextBigWidth(text)) : cells[i];
+    int width = screenTextBigWidth(text);
+    cell_t c = cells[i].fit_text ? placeLeft(width) : cells[i];
+    // число длиннее отведённого места (напряжение выше выбранной батареи) прижимается к левому краю экрана
+    if(c.right - width + 1 < 3) c = placeLeft(width);
     screenTextBig(c.right, y, text);
     drawUnit(c.unit_x, y, values[i]);
   }

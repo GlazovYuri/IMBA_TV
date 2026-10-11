@@ -162,16 +162,15 @@ static void drawBigValue(int left, int right, int center2, int y, uint8_t value,
   oled.print(label);
 }
 
-void screenMainDraw(uint8_t dev_charge, bool is_charging, euc_data_t& data, bool show_voltage)
+void screenMainDraw(uint8_t dev_charge, bool is_charging, euc_data_t& data, uint8_t top, uint8_t left, uint8_t right)
 {
   drawDevCharge(0, 1, dev_charge, is_charging);
-  if(show_voltage) drawEucVoltage(47, 1, data);
+  if(top == EUC_VALUE_VOLTAGE) drawEucVoltage(47, 1, data);
   else drawEucCharge(47, 1, data.charge);
 
   // середины мест - как у трёх знаков слева и двух справа: x 0..67 и 72..115
-  const fw_config_t& cfg = config();
-  drawBigValue(0, 71, 67, 18, cfg.main_left, data);
-  drawBigValue(72, scr_width - 1, 187, 18, cfg.main_right, data);
+  drawBigValue(0, 71, 67, 18, left, data);
+  drawBigValue(72, scr_width - 1, 187, 18, right, data);
 }
 
 void screenNoLinkDraw(uint8_t dev_charge, bool is_charging)

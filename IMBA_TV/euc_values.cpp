@@ -2,16 +2,16 @@
 #include "config.h"
 #include <Arduino.h>
 
-// номера в config.json должны совпадать с EUC_VALUE_* (у всех клеток сетки и мест основного экрана
-// одинаковые варианты, это проверяют тесты сайта)
+// номера в config.json должны совпадать с EUC_VALUE_* и SCREEN_* (у всех экранов одинаковые варианты,
+// это проверяют тесты сайта)
 static constexpr bool same(int a, int b) { return a == b; }
-static_assert(same(CONFIG_GRID_1_SPEED, EUC_VALUE_SPEED) && same(CONFIG_GRID_1_PWM, EUC_VALUE_PWM) &&
-              same(CONFIG_GRID_1_CHARGE, EUC_VALUE_CHARGE) && same(CONFIG_GRID_1_VOLTAGE, EUC_VALUE_VOLTAGE) &&
-              same(CONFIG_GRID_1_TEMPERATURE, EUC_VALUE_TEMPERATURE) && same(CONFIG_GRID_1_TRIP, EUC_VALUE_TRIP),
-              "config.json: номера значений сетки разошлись с EUC_VALUE_*");
-static_assert(same(CONFIG_MAIN_LEFT_SPEED, EUC_VALUE_SPEED) && same(CONFIG_MAIN_LEFT_PWM, EUC_VALUE_PWM) &&
-              same(CONFIG_MAIN_LEFT_TEMPERATURE, EUC_VALUE_TEMPERATURE),
-              "config.json: номера значений основного экрана разошлись с EUC_VALUE_*");
+static_assert(same(CONFIG_SCREEN1_V1_SPEED, EUC_VALUE_SPEED) && same(CONFIG_SCREEN1_V1_PWM, EUC_VALUE_PWM) &&
+              same(CONFIG_SCREEN1_V1_CHARGE, EUC_VALUE_CHARGE) && same(CONFIG_SCREEN1_V1_VOLTAGE, EUC_VALUE_VOLTAGE) &&
+              same(CONFIG_SCREEN1_V1_TEMPERATURE, EUC_VALUE_TEMPERATURE) && same(CONFIG_SCREEN1_V1_TRIP, EUC_VALUE_TRIP),
+              "config.json: номера значений разошлись с EUC_VALUE_*");
+static_assert(same(CONFIG_SCREEN1_TYPE_NONE, SCREEN_NONE) && same(CONFIG_SCREEN1_TYPE_MAIN, SCREEN_MAIN) &&
+              same(CONFIG_SCREEN1_TYPE_GRID, SCREEN_GRID) && same(CONFIG_SCREEN1_TYPE_INFO, SCREEN_INFO),
+              "config.json: номера типов экранов разошлись с SCREEN_*");
 
 void eucValueText(uint8_t value, const euc_data_t& data, char* text, size_t size)
 {

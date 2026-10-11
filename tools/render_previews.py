@@ -6,13 +6,21 @@
 виртуальное и течёт со скоростью шины I2C, поэтому кадры и их длительность как на дисплее.
 PNG - один кадр для тех, у кого в системе отключена анимация.
 
+Заодно для редактора экранов на сайте:
+* web/js/oled-font.js - шрифт GyverOLED, им сайт рисует экраны;
+* web/test/fixtures/screens.json - кадры экранов от кода прошивки: тест сайта сверяет с ними
+  свою отрисовку (web/js/screens.js), поэтому после изменения экранов запустите этот скрипт.
+
 Нужны компилятор C++ и библиотека GyverOLED (та же, что для Arduino IDE).
 После изменения анимаций или основного экрана запустите:
 
     python3 tools/render_previews.py [--gyveroled ПУТЬ_К_GyverOLED/src]
 """
 import argparse
+import hashlib
+import json
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -24,6 +32,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKETCH = os.path.join(ROOT, 'IMBA_TV')
 HARNESS = os.path.join(ROOT, 'tools', 'previews')
 OUT = os.path.join(ROOT, 'web', 'previews')
+FONT_JS = os.path.join(ROOT, 'web', 'js', 'oled-font.js')
+SCREENS_JSON = os.path.join(ROOT, 'web', 'test', 'fixtures', 'screens.json')
 SOURCES = ['animations', 'display', 'screen_main', 'screen_grid', 'screen_info', 'screen_text', 'euc_values', 'config', 'logo', 'qr']
 
 W, H = 128, 64
@@ -211,6 +221,55 @@ def write_png(path, rows):
         f.write(png)
 
 
+def write_font(gyveroled):
+    """Таблица символов GyverOLED (charMap.h) для отрисовки экранов на сайте."""
+    with open(os.path.join(gyveroled, 'charMap.h'), encoding='utf-8') as f:
+        text = f.read()
+    # закомментированный в библиотеке второй вариант кириллицы не используется
+    text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
+    body = text[text.index('{', text.index('_charMap')) + 1:]
+    glyphs = re.findall(r'\{\s*(0x[0-9a-fA-F]+(?:\s*,\s*0x[0-9a-fA-F]+){4})\s*\}', body)
+    rows = [''.join(f'{int(b, 16):02x}' for b in g.split(',')) for g in glyphs]
+    lines = [rows[i:i + 8] for i in range(0, len(rows), 8)]
+    with open(FONT_JS, 'w', encoding='utf-8') as f:
+        f.write('// Сгенерировано tools/render_previews.py из charMap.h библиотеки GyverOLED (MIT, AlexGyver).\n')
+        f.write('// Символ - 5 столбцов по байту, младший бит сверху; порядок как в _charMap.\n')
+        f.write('export const FONT_HEX =\n')
+        f.write(' +\n'.join(f"  '{''.join(line)}'" for line in lines) + ';\n')
+    print(f'{os.path.relpath(FONT_JS, ROOT)}: {len(rows)} символов')
+
+
+SCREEN_HEAD = struct.Struct('<B4BHBBBBHBBHhHHH')
+
+
+def write_screens(path):
+    """Кадры экранов из стенда в JSON для теста сайта: параметры, данные и SHA-256 кадра."""
+    data = open(path, 'rb').read()
+    record = SCREEN_HEAD.size + FRAME_BYTES
+    cases = []
+    for pos in range(0, len(data), record):
+        (kind, v1, v2, v3, v4, wheel, dev, charging, connected, present, speed, pwm, charge,
+         voltage, temperature, trip, interval, last) = SCREEN_HEAD.unpack_from(data, pos)
+        frame = data[pos + SCREEN_HEAD.size:pos + record]
+        cases.append({
+            'screen': {'type': kind, 'v': [v1, v2, v3, v4]},
+            'wheel_voltage_x10': wheel,
+            'dev_charge': dev,
+            'is_charging': bool(charging),
+            'data': {'is_connected': bool(connected), 'present': present, 'speed': speed, 'pwm': pwm,
+                     'charge': charge, 'voltage_x10': voltage, 'temperature_x10': temperature, 'trip_x10': trip,
+                     'frame_interval_ms': interval, 'frame_last_interval_ms': last},
+            'sha256': hashlib.sha256(frame).hexdigest(),
+        })
+    doc = {'firmware': 'dev', 'bootloader': '0.10.0', 'cases': cases}
+    with open(SCREENS_JSON, 'w', encoding='utf-8') as f:
+        f.write('{"firmware": "dev", "bootloader": "0.10.0", "cases": [\n')
+        f.write(',\n'.join(json.dumps(c, ensure_ascii=False) for c in cases))
+        f.write('\n]}\n')
+    assert json.load(open(SCREENS_JSON, encoding='utf-8')) == doc
+    print(f'{os.path.relpath(SCREENS_JSON, ROOT)}: {len(cases)} кадров')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--gyveroled', help='путь к GyverOLED/src')
@@ -222,6 +281,8 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         exe = build(gyveroled, tmp)
         subprocess.run([exe, tmp, hex(SEED)], check=True)
+        write_font(gyveroled)
+        write_screens(os.path.join(tmp, 'screens.bin'))
         for name, poster_ms in POSTER_MS.items():
             frames, end = read_frames(os.path.join(tmp, f'{name}.bin'))
             images = [(to_image(frame), cs) for frame, cs in timeline(frames, end)]

@@ -6,6 +6,7 @@
 #include "screen_main.h"
 #include "screen_grid.h"
 #include "screen_info.h"
+#include "euc_values.h"
 
 static const uint32_t blink_period_low = 1000; //ms
 static const uint32_t blink_period_high = 300; //ms
@@ -13,18 +14,17 @@ static const uint32_t blink_length = 50; //ms
 
 static const int scr_width = 128;
 
-// режимы экрана, переключаются коротким нажатием кнопки
-enum
+// экраны из настроек по порядку, переключаются коротким нажатием кнопки.
+// type - SCREEN_*, v - значения EUC_VALUE_*: у экрана с двумя значениями верхняя строка, слева и справа,
+// у сетки клетки по строкам
+struct screen_t
 {
-  MODE_CHARGE,   // основной экран, заряд колеса в процентах (screen_main)
-  MODE_VOLTAGE,  // основной экран, напряжение колеса (screen_main)
-  MODE_GRID,     // сетка параметров (screen_grid)
-  MODE_INFO,     // связь с телефоном и версии прошивки и загрузчика (screen_info)
-  display_modes
+  uint8_t type;
+  uint8_t v[4];
 };
 
-// включённые в настройках режимы по порядку, display_mode - индекс в этом списке
-static uint8_t modes[display_modes];
+static const uint8_t display_modes = 5;
+static screen_t modes[display_modes];
 static uint8_t modes_cnt = 0;
 static uint8_t display_mode = 0;
 
@@ -44,14 +44,33 @@ static const int8_t spinner_dy[8] = {0, 4, 6, 4, 0, -4, -6, -4};
 
 GyverOLED<SSH1106_128x64> oled;
 
+static bool isBigValue(uint8_t value)
+{
+  return value == EUC_VALUE_SPEED || value == EUC_VALUE_PWM || value == EUC_VALUE_TEMPERATURE;
+}
+
 void displayInit()
 {
   const fw_config_t& cfg = config();
+#define SCREEN(n) { cfg.screen##n##_type, { cfg.screen##n##_v1, cfg.screen##n##_v2, cfg.screen##n##_v3, cfg.screen##n##_v4 } }
+  const screen_t slots[display_modes] = { SCREEN(1), SCREEN(2), SCREEN(3), SCREEN(4), SCREEN(5) };
+#undef SCREEN
+
   modes_cnt = 0;
-  if(cfg.screen_charge) modes[modes_cnt++] = MODE_CHARGE;
-  if(cfg.screen_voltage) modes[modes_cnt++] = MODE_VOLTAGE;
-  if(cfg.screen_grid) modes[modes_cnt++] = MODE_GRID;
-  if(cfg.screen_info) modes[modes_cnt++] = MODE_INFO;
+  for(uint8_t i = 0; i < display_modes; i++)
+  {
+    screen_t s = slots[i];
+    if(s.type == SCREEN_NONE) continue;
+    // у экрана с двумя значениями свои варианты: сверху заряд или напряжение, крупно скорость, ШИМ или температура
+    if(s.type == SCREEN_MAIN)
+    {
+      if(s.v[0] != EUC_VALUE_VOLTAGE) s.v[0] = EUC_VALUE_CHARGE;
+      if(!isBigValue(s.v[1])) s.v[1] = EUC_VALUE_SPEED;
+      if(!isBigValue(s.v[2])) s.v[2] = EUC_VALUE_PWM;
+    }
+    modes[modes_cnt++] = s;
+  }
+  if(modes_cnt == 0) modes[modes_cnt++] = { SCREEN_MAIN, { EUC_VALUE_CHARGE, EUC_VALUE_SPEED, EUC_VALUE_PWM, EUC_VALUE_TRIP } };
   display_mode = 0;
 
   oled.init();
@@ -116,13 +135,12 @@ void displayRenderIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
 {
   oled.clear();
 
-  uint8_t mode = modes_cnt ? modes[display_mode] : MODE_CHARGE;
+  const screen_t& screen = modes[display_mode];
   // версии полезны и без телефона, поэтому экран связи и версий показывается всегда
-  if(mode == MODE_INFO) screenInfoDraw(data);
+  if(screen.type == SCREEN_INFO) screenInfoDraw(data);
   else if(!data.is_connected) screenNoLinkDraw(dev_charge, is_charging);
-  else if(mode == MODE_CHARGE) screenMainDraw(dev_charge, is_charging, data, false);
-  else if(mode == MODE_VOLTAGE) screenMainDraw(dev_charge, is_charging, data, true);
-  else screenGridDraw(data);
+  else if(screen.type == SCREEN_GRID) screenGridDraw(data, screen.v);
+  else screenMainDraw(dev_charge, is_charging, data, screen.v[0], screen.v[1], screen.v[2]);
 
   drawModeDots();
 }

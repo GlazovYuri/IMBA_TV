@@ -41,26 +41,6 @@ test('подпункт зависит от галочки выше в той ж�
   }
 });
 
-test('значения экранов: одни и те же номера в сетке и на основном экране', () => {
-  // прошивка (IMBA_TV/euc_values.h) понимает номер значения одинаково для всех клеток и мест
-  const byKey = Object.fromEntries(source.groups.flatMap((g) => g.fields).map((f) => [f.key, f]));
-  const grid = ['grid_1', 'grid_2', 'grid_3', 'grid_4'].map((k) => byKey[k]);
-  const main = ['main_left', 'main_right'].map((k) => byKey[k]);
-  for (const f of [...grid, ...main]) assert.ok(f?.options, `нет настройки ${f?.key}`);
-
-  const all = grid[0].options;
-  for (const f of grid) assert.deepEqual(f.options, all, `${f.key}: варианты отличаются от grid_1`);
-  for (const f of main) {
-    for (const o of f.options) assert.deepEqual(all.find((a) => a.id === o.id), o, `${f.key}: ${o.id} не совпадает с сеткой`);
-  }
-  assert.deepEqual(main[0].options, main[1].options);
-
-  // по умолчанию экраны выглядят как до настройки: скорость и ШИМ, сетка заряд, напряжение, температура, пробег
-  const id = (f) => f.options.find((o) => o.value === f.default).id;
-  assert.deepEqual(main.map(id), ['SPEED', 'PWM']);
-  assert.deepEqual(grid.map(id), ['CHARGE', 'VOLTAGE', 'TEMPERATURE', 'TRIP']);
-});
-
 test('прошивка без блока настроек', () => {
   assert.equal(findConfig(appBin), null);
 });
@@ -74,7 +54,7 @@ test('значения по умолчанию читаются из образ�
 test('настройки записываются только в блок', () => {
   const bin = withBlock(appBin, 2000);
   const cfg = findConfig(bin);
-  const values = { ...defaultValues(cfg), screen_grid: false, brightness: 40, power_off_ms: 2500, intro_break: false };
+  const values = { ...defaultValues(cfg), screen3_type: 0, brightness: 40, power_off_ms: 2500, intro_break: false };
   const out = applyValues(bin, cfg, values);
 
   assert.deepEqual(readValues(out, cfg), values);
@@ -91,7 +71,8 @@ test('недопустимые значения отклоняются', () => {
   assert.throws(() => checkValue(byKey.power_on_ms, '1.5'), /целое/);
   assert.throws(() => checkValue(byKey.pwm_alarm_source, 9), /недопустимое/);
   assert.equal(checkValue(byKey.wheel_voltage_x10, '840'), 840);
-  assert.throws(() => checkValue(byKey.screen_grid, 1), FirmwareError);
+  assert.throws(() => checkValue(byKey.screen1_type, 7), /недопустимое/);
+  assert.throws(() => checkValue(byKey.ble_update, 1), FirmwareError);
 
   const cfg = findConfig(withBlock(appBin));
   assert.throws(() => applyValues(withBlock(appBin), cfg, { ...defaultValues(cfg), brightness: 300 }), FirmwareError);
@@ -118,10 +99,11 @@ test('зависимые поля', () => {
 
 test('сохранённые настройки применяются, если подходят прошивке', () => {
   const cfg = findConfig(withBlock(appBin));
-  const merged = mergeValues(cfg, defaultValues(cfg), { brightness: 30, pwm_alarm_source: 42, unknown: 1, screen_grid: false });
+  const merged = mergeValues(cfg, defaultValues(cfg), { brightness: 30, pwm_alarm_source: 42, unknown: 1, screen3_type: 0, screen_grid: false });
   assert.equal(merged.brightness, 30);
   assert.equal(merged.pwm_alarm_source, 0);
-  assert.equal(merged.screen_grid, false);
+  assert.equal(merged.screen3_type, 0);
+  assert.ok(!('screen_grid' in merged), 'настройки прежних версий не мешают');
   assert.ok(!('unknown' in merged));
 });
 

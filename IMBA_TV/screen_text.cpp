@@ -13,7 +13,8 @@ int screenTextBigWidth(const char* text)
 
 void screenTextBig(int right, int y, const char* text)
 {
-  int x = right - screenTextBigWidth(text) + 1;
+  // левее края экрана нельзя: GyverOLED со сдвигом по y пишет тогда мимо своего буфера
+  int x = max(right - screenTextBigWidth(text) + 1, 0);
   oled.setScale(2);
   for(const char* p = text; *p; p++)
   {

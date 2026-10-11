@@ -3,32 +3,27 @@
   "groups": [
     {
       "title": "Экраны",
-      "help": "Страницы, которые переключаются коротким нажатием кнопки",
-      "require_one": true,
+      "help": "Страницы, которые переключаются коротким нажатием кнопки: до пяти, в любом порядке",
+      "widget": "screens",
       "fields": [
         {
-          "key": "screen_charge",
-          "type": "bool",
-          "default": true,
-          "label": "Основной: два крупных значения и заряд колеса"
+          "key": "screen1_type",
+          "type": "u8",
+          "default": 1,
+          "label": "Экран 1",
+          "help": "Экраны идут по порядку, пустые пропускаются. Поля: у экрана с двумя значениями 1 - верхняя строка (заряд или напряжение), 2 и 3 - крупные значения слева и справа; у сетки 1-4 - клетки по строкам",
+          "options": [
+            { "value": 0, "id": "NONE", "label": "Нет" },
+            { "value": 1, "id": "MAIN", "label": "Два значения" },
+            { "value": 2, "id": "GRID", "label": "Четыре значения" },
+            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+          ]
         },
         {
-          "key": "screen_voltage",
-          "type": "bool",
-          "default": true,
-          "label": "Основной: два крупных значения и напряжение колеса"
-        },
-        {
-          "key": "screen_grid",
-          "type": "bool",
-          "default": true,
-          "label": "Сетка из четырёх значений"
-        },
-        {
-          "key": "grid_1",
+          "key": "screen1_v1",
           "type": "u8",
           "default": 2,
-          "label": "Слева сверху",
+          "label": "Экран 1, поле 1",
           "options": [
             { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
@@ -36,15 +31,13 @@
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
             { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
             { "value": 5, "id": "TRIP", "label": "Пробег, км" }
-          ],
-          "depends": { "screen_grid": true },
-          "subitem": true
+          ]
         },
         {
-          "key": "grid_2",
+          "key": "screen1_v2",
           "type": "u8",
-          "default": 3,
-          "label": "Справа сверху",
+          "default": 0,
+          "label": "Экран 1, поле 2",
           "options": [
             { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
@@ -52,15 +45,13 @@
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
             { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
             { "value": 5, "id": "TRIP", "label": "Пробег, км" }
-          ],
-          "depends": { "screen_grid": true },
-          "subitem": true
+          ]
         },
         {
-          "key": "grid_3",
+          "key": "screen1_v3",
           "type": "u8",
-          "default": 4,
-          "label": "Слева снизу",
+          "default": 1,
+          "label": "Экран 1, поле 3",
           "options": [
             { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
@@ -68,15 +59,13 @@
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
             { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
             { "value": 5, "id": "TRIP", "label": "Пробег, км" }
-          ],
-          "depends": { "screen_grid": true },
-          "subitem": true
+          ]
         },
         {
-          "key": "grid_4",
+          "key": "screen1_v4",
           "type": "u8",
           "default": 5,
-          "label": "Справа снизу",
+          "label": "Экран 1, поле 4",
           "options": [
             { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
@@ -84,15 +73,279 @@
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
             { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
             { "value": 5, "id": "TRIP", "label": "Пробег, км" }
-          ],
-          "depends": { "screen_grid": true },
-          "subitem": true
+          ]
         },
         {
-          "key": "screen_info",
-          "type": "bool",
-          "default": true,
-          "label": "Связь и версии: задержка и частота данных, версии прошивки и загрузчика"
+          "key": "screen2_type",
+          "type": "u8",
+          "default": 1,
+          "label": "Экран 2",
+          "options": [
+            { "value": 0, "id": "NONE", "label": "Нет" },
+            { "value": 1, "id": "MAIN", "label": "Два значения" },
+            { "value": 2, "id": "GRID", "label": "Четыре значения" },
+            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+          ]
+        },
+        {
+          "key": "screen2_v1",
+          "type": "u8",
+          "default": 3,
+          "label": "Экран 2, поле 1",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen2_v2",
+          "type": "u8",
+          "default": 0,
+          "label": "Экран 2, поле 2",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen2_v3",
+          "type": "u8",
+          "default": 1,
+          "label": "Экран 2, поле 3",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen2_v4",
+          "type": "u8",
+          "default": 5,
+          "label": "Экран 2, поле 4",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen3_type",
+          "type": "u8",
+          "default": 2,
+          "label": "Экран 3",
+          "options": [
+            { "value": 0, "id": "NONE", "label": "Нет" },
+            { "value": 1, "id": "MAIN", "label": "Два значения" },
+            { "value": 2, "id": "GRID", "label": "Четыре значения" },
+            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+          ]
+        },
+        {
+          "key": "screen3_v1",
+          "type": "u8",
+          "default": 2,
+          "label": "Экран 3, поле 1",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen3_v2",
+          "type": "u8",
+          "default": 3,
+          "label": "Экран 3, поле 2",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen3_v3",
+          "type": "u8",
+          "default": 4,
+          "label": "Экран 3, поле 3",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen3_v4",
+          "type": "u8",
+          "default": 5,
+          "label": "Экран 3, поле 4",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen4_type",
+          "type": "u8",
+          "default": 3,
+          "label": "Экран 4",
+          "options": [
+            { "value": 0, "id": "NONE", "label": "Нет" },
+            { "value": 1, "id": "MAIN", "label": "Два значения" },
+            { "value": 2, "id": "GRID", "label": "Четыре значения" },
+            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+          ]
+        },
+        {
+          "key": "screen4_v1",
+          "type": "u8",
+          "default": 2,
+          "label": "Экран 4, поле 1",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen4_v2",
+          "type": "u8",
+          "default": 3,
+          "label": "Экран 4, поле 2",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen4_v3",
+          "type": "u8",
+          "default": 4,
+          "label": "Экран 4, поле 3",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen4_v4",
+          "type": "u8",
+          "default": 5,
+          "label": "Экран 4, поле 4",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen5_type",
+          "type": "u8",
+          "default": 0,
+          "label": "Экран 5",
+          "options": [
+            { "value": 0, "id": "NONE", "label": "Нет" },
+            { "value": 1, "id": "MAIN", "label": "Два значения" },
+            { "value": 2, "id": "GRID", "label": "Четыре значения" },
+            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+          ]
+        },
+        {
+          "key": "screen5_v1",
+          "type": "u8",
+          "default": 2,
+          "label": "Экран 5, поле 1",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen5_v2",
+          "type": "u8",
+          "default": 3,
+          "label": "Экран 5, поле 2",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen5_v3",
+          "type": "u8",
+          "default": 4,
+          "label": "Экран 5, поле 3",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
+        },
+        {
+          "key": "screen5_v4",
+          "type": "u8",
+          "default": 5,
+          "label": "Экран 5, поле 4",
+          "options": [
+            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
+            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
+            { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
+            { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+          ]
         },
         {
           "key": "wheel_voltage_x10",
@@ -108,30 +361,6 @@
             { "value": 1512, "id": "36S", "label": "151,2 В (36S)" },
             { "value": 1680, "id": "40S", "label": "168 В (40S)" },
             { "value": 1764, "id": "42S", "label": "176,4 В (42S)" }
-          ]
-        },
-        {
-          "key": "main_left",
-          "type": "u8",
-          "default": 0,
-          "section": "Основной экран",
-          "label": "Крупное значение слева",
-          "options": [
-            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
-            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" }
-          ]
-        },
-        {
-          "key": "main_right",
-          "type": "u8",
-          "default": 1,
-          "label": "Крупное значение справа",
-          "help": "Число, которое не помещается крупно, выводится шрифтом поменьше",
-          "options": [
-            { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
-            { "value": 1, "id": "PWM", "label": "ШИМ, %" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" }
           ]
         }
       ]
