@@ -116,7 +116,7 @@ static const char* bigLabel(uint8_t value)
   {
     case EUC_VALUE_SPEED: return "скорость";
     case EUC_VALUE_PWM: return "ШИМ";
-    case EUC_VALUE_TEMPERATURE: return "температура";
+    case EUC_VALUE_TEMPERATURE: return "темп";
     default: return "";
   }
 }
@@ -154,7 +154,7 @@ static void drawBigValue(int left, int right, int center2, int y, uint8_t value,
   oled.setScale(scale);
   oled.print(text);
 
-  // подпись может выйти за своё место: «температура» справа шире его
+  // подпись может выйти за своё место, если оно узкое
   const char* label = bigLabel(value);
   width = textChars(label) * 6 - 1;
   oled.setCursorXY(centerX(center2, width, 0, scr_width - 1), y + 38);

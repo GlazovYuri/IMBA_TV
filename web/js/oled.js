@@ -31,12 +31,31 @@ export class Oled {
     this.shift = 0;
     this.mode = BUF_REPLACE;
     this.lastChar = 0;
+    // какие точки зажгла каждая часть экрана: пока tag задан, рамка всех зажжённых точек копится в boxes[tag]
+    this.tag = null;
+    this.boxes = new Map();
   }
 
   // ---------- буфер ----------
 
   index(x, y) {
     return (y >> 3) + (x << 3);
+  }
+
+  // байт data зажёг точки в байте буфера i: рамка части экрана tag растёт до них
+  mark(i, data) {
+    if (this.tag == null || !(data & 0xff)) return;
+    const x = i >> 3;
+    const top = ((i & 7) << 3) + (31 - Math.clz32(data & -data));
+    const bottom = ((i & 7) << 3) + (31 - Math.clz32(data & 0xff));
+    const box = this.boxes.get(this.tag);
+    if (!box) this.boxes.set(this.tag, [x, top, x, bottom]);
+    else {
+      box[0] = Math.min(box[0], x);
+      box[1] = Math.min(box[1], top);
+      box[2] = Math.max(box[2], x);
+      box[3] = Math.max(box[3], bottom);
+    }
   }
 
   // как writeData: байт в столбец курсора со сдвигом offsetX и на offsetY страниц ниже, без проверки границ.
@@ -48,6 +67,7 @@ export class Oled {
     if (mode === BUF_ADD) this.buffer[i] |= data;
     else if (mode === BUF_SUBTRACT) this.buffer[i] &= ~data;
     else this.buffer[i] = data;
+    if (mode !== BUF_SUBTRACT) this.mark(i, data);
   }
 
   clear() {
@@ -179,8 +199,10 @@ export class Oled {
     this.x = 0;
     this.y = 0;
     const i = this.index(x, y);
-    if (fill) this.buffer[i] |= 1 << (y & 7);
-    else this.buffer[i] &= ~(1 << (y & 7));
+    if (fill) {
+      this.buffer[i] |= 1 << (y & 7);
+      this.mark(i, 1 << (y & 7));
+    } else this.buffer[i] &= ~(1 << (y & 7));
   }
 
   // правый край не включается, если линия доходит до края экрана: так в GyverOLED
@@ -249,8 +271,10 @@ export class Oled {
     x1 = Math.min(Math.max(x1, 0), MAX_X);
     const put = (data, row, x) => {
       const i = (x << 3) + row;
-      if (mode === BUF_ADD) this.buffer[i] |= data & 0xff;
-      else this.buffer[i] &= ~data & 0xff;
+      if (mode === BUF_ADD) {
+        this.buffer[i] |= data & 0xff;
+        this.mark(i, data);
+      } else this.buffer[i] &= ~data & 0xff;
     };
     for (let x = x0; x <= x1; x++) {
       let row = row0;
@@ -281,6 +305,7 @@ export class Oled {
       if (mode === BUF_ADD) this.buffer[i] |= data & 0xff;
       else if (mode === BUF_SUBTRACT) this.buffer[i] &= ~data & 0xff;
       else this.buffer[i] = data & 0xff;
+      if (mode !== BUF_SUBTRACT) this.mark(i, data);
     };
     for (let X = x, cx = 0; X < x + width; X++, cx++) {
       let prev = 0;

@@ -152,3 +152,35 @@ test('изменение значения на экране считается �
   values.screen4_v1 = VALUE.SPEED;
   assert.equal(changedScreens(slots, values), 1);
 });
+
+import { zoneBox } from '../js/screen-editor.js';
+
+test('рамки мест обводят то, что место рисует, и не налезают друг на друга', () => {
+  const overlap = (a, b) => a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3];
+  const all = [VALUE.SPEED, VALUE.PWM, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP];
+  const cases = [];
+  for (const top of [VALUE.CHARGE, VALUE.VOLTAGE]) {
+    for (const l of [VALUE.SPEED, VALUE.PWM, VALUE.TEMPERATURE]) {
+      for (const r of [VALUE.SPEED, VALUE.PWM, VALUE.TEMPERATURE]) cases.push({ type: SCREEN.MAIN, v: [top, l, r, 0] });
+    }
+  }
+  for (const a of all) for (const b of all) cases.push({ type: SCREEN.GRID, v: [a, b, all[(a + 2) % 6], all[(b + 3) % 6]] });
+
+  for (const screen of cases) {
+    const oled = renderScreen(screen);
+    const { slots } = SCREEN_TYPES[screen.type];
+    const zones = slots.map((s, i) => {
+      const box = oled.boxes.get(i);
+      assert.ok(box, `${JSON.stringify(screen)}: место ${i} ничего не нарисовало`);
+      // все точки места внутри его рамки
+      const zone = zoneBox(box, s.zone);
+      assert.ok(zone[0] <= box[0] && zone[1] <= box[1] && zone[2] >= box[2] && zone[3] >= box[3]);
+      return zone;
+    });
+    for (let i = 0; i < zones.length; i++) {
+      for (let k = i + 1; k < zones.length; k++) {
+        assert.ok(!overlap(zones[i], zones[k]), `${JSON.stringify(screen)}: рамки ${i} и ${k} пересекаются`);
+      }
+    }
+  }
+});

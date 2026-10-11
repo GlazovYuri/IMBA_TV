@@ -812,21 +812,31 @@ button.screen-shot:disabled { cursor: not-allowed; }
   border-bottom: 1px solid var(--ink);
 }
 .screen-dialog-title { margin: 0; font: 800 22px/1.15 var(--cond); }
-.screen-stage { position: relative; margin: 20px 20px 0; padding: 10px; border: 2px solid var(--ink); background: var(--oled); line-height: 0; }
-.screen-stage-canvas { display: block; width: 100%; height: auto; aspect-ratio: 2; image-rendering: pixelated; }
+.screen-stage {
+  position: relative;
+  width: fit-content;
+  margin: 20px auto 0;
+  padding: 10px;
+  border: 2px solid var(--ink);
+  background: var(--oled);
+  line-height: 0;
+}
+/* размер задаёт редактор: экран в целое число раз */
+.screen-stage-canvas { display: block; image-rendering: pixelated; }
 .screen-zones { position: absolute; inset: 10px; }
 .screen-zone {
   position: absolute;
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  border: 2px dashed rgb(242 194 48 / 0.45);
+  border: 2px dashed rgb(242 194 48 / 0.6);
   border-radius: 0;
   background: transparent;
   cursor: pointer;
   transition: background-color 140ms ease, border-color 140ms ease;
 }
-.screen-zone[aria-pressed="true"] { border: 3px solid var(--caution); background: rgb(242 194 48 / 0.14); }
-.screen-zone:focus-visible { outline: 3px solid var(--oled-px); outline-offset: -6px; }
+.screen-zone[aria-pressed="true"] { border: 2px solid var(--caution); background: rgb(242 194 48 / 0.16); }
+.screen-zone:focus-visible { outline: 2px solid var(--oled-px); outline-offset: 2px; }
 @media (hover: hover) {
   .screen-zone:hover { border-color: var(--caution); background: rgb(242 194 48 / 0.08); }
 }
@@ -874,7 +884,7 @@ button.screen-shot:disabled { cursor: not-allowed; }
   .screen-tiles { grid-template-columns: minmax(0, 1fr); }
   .screen-tile { flex-direction: row; align-items: center; }
   .screen-tile canvas { width: 128px; flex: none; }
-  .screen-stage { margin: 14px 14px 0; padding: 6px; }
+  .screen-stage { margin: 14px auto 0; padding: 6px; }
   .screen-zones { inset: 6px; }
   .screen-hint, .screen-choice { margin-left: 14px; margin-right: 14px; }
   .screen-dialog-foot { padding: 16px 14px; }
