@@ -62,12 +62,13 @@ body { -webkit-font-smoothing: antialiased; }
 .v-node { font: 800 34px/1.15 var(--cond); color: var(--ink); text-align: center; width: 360px; }
 #link-cap { left: 120px; top: 902px; }
 
-#open .v-h2 { left: 120px; top: 150px; }
+#open .v-h2 { left: 120px; top: 312px; }
+#open .v-rows { top: 460px; }
 .v-rows { left: 120px; top: 300px; width: 760px; border-top: 3px solid var(--ink); }
 .v-row { position: relative; padding: 22px 0 24px; border-bottom: 1px solid var(--hair); }
 .v-row-k { margin: 0 0 10px; color: var(--ink-2); font: 700 24px/1.2 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; }
 .v-row-v { margin: 0; font: 600 40px/1.15 var(--mono); letter-spacing: -0.01em; color: var(--ink); }
-.v-repo { left: 1000px; top: 150px; width: 800px; border: 2px solid var(--ink); background: var(--paper); }
+.v-repo { left: 1000px; top: 312px; width: 800px; border: 2px solid var(--ink); background: var(--paper); }
 .v-repo-head { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 20px 12px; border-bottom: 2px solid var(--ink); background: var(--paper-2); }
 .v-repo-title { font: 800 22px/1.2 var(--cond); letter-spacing: 0.1em; text-transform: uppercase; }
 .v-repo-url { color: var(--ink-2); font: 500 22px/1.2 var(--mono); }
@@ -76,7 +77,7 @@ body { -webkit-font-smoothing: antialiased; }
 .v-repo-list li:last-child { border-bottom: 0; }
 .v-repo-name { font: 600 28px/1.2 var(--mono); color: var(--ink); }
 .v-repo-note { font: 400 28px/1.25 var(--sans); color: var(--ink-2); }
-#open-cap { left: 1000px; top: 902px; }
+#open-cap { left: 1000px; top: 674px; }
 
 #screen-head { left: 120px; top: 120px; }
 #leaders { left: 0; top: 0; overflow: visible; }
