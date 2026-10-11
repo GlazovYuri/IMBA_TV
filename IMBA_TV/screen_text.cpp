@@ -3,13 +3,17 @@
 
 extern GyverOLED<SSH1106_128x64> oled;
 
-void screenTextBig(int right, int y, const char* text)
+int screenTextBigWidth(const char* text)
 {
   // знак: 10 px + 2 px промежуток, точка: 2 px + 2 px промежуток
   int width = 0;
   for(const char* p = text; *p; p++) width += (*p == '.') ? 4 : 12;
+  return width - 2;
+}
 
-  int x = right - (width - 2) + 1;
+void screenTextBig(int right, int y, const char* text)
+{
+  int x = right - screenTextBigWidth(text) + 1;
   oled.setScale(2);
   for(const char* p = text; *p; p++)
   {

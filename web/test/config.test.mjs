@@ -41,6 +41,26 @@ test('подпункт зависит от галочки выше в той ж�
   }
 });
 
+test('значения экранов: одни и те же номера в сетке и на основном экране', () => {
+  // прошивка (IMBA_TV/euc_values.h) понимает номер значения одинаково для всех клеток и мест
+  const byKey = Object.fromEntries(source.groups.flatMap((g) => g.fields).map((f) => [f.key, f]));
+  const grid = ['grid_1', 'grid_2', 'grid_3', 'grid_4'].map((k) => byKey[k]);
+  const main = ['main_left', 'main_right'].map((k) => byKey[k]);
+  for (const f of [...grid, ...main]) assert.ok(f?.options, `нет настройки ${f?.key}`);
+
+  const all = grid[0].options;
+  for (const f of grid) assert.deepEqual(f.options, all, `${f.key}: варианты отличаются от grid_1`);
+  for (const f of main) {
+    for (const o of f.options) assert.deepEqual(all.find((a) => a.id === o.id), o, `${f.key}: ${o.id} не совпадает с сеткой`);
+  }
+  assert.deepEqual(main[0].options, main[1].options);
+
+  // по умолчанию экраны выглядят как до настройки: скорость и ШИМ, сетка заряд, напряжение, температура, пробег
+  const id = (f) => f.options.find((o) => o.value === f.default).id;
+  assert.deepEqual(main.map(id), ['SPEED', 'PWM']);
+  assert.deepEqual(grid.map(id), ['CHARGE', 'VOLTAGE', 'TEMPERATURE', 'TRIP']);
+});
+
 test('прошивка без блока настроек', () => {
   assert.equal(findConfig(appBin), null);
 });

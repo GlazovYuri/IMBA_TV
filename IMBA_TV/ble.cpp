@@ -42,6 +42,7 @@ static void frameTimingReset()
   frame_hist_cnt = 0;
   frame_hist_pos = 0;
   euc_data.frame_interval_ms = 0;
+  euc_data.frame_last_interval_ms = 0;
   euc_data.last_frame_ms = 0;
 }
 
@@ -50,7 +51,9 @@ static void frameTimingUpdate()
   uint32_t now = millis();
   if(euc_data.last_frame_ms != 0)
   {
-    frame_intervals[frame_hist_pos] = now - euc_data.last_frame_ms;
+    uint32_t interval = now - euc_data.last_frame_ms;
+    euc_data.frame_last_interval_ms = (interval > UINT16_MAX) ? UINT16_MAX : (interval == 0 ? 1 : interval);
+    frame_intervals[frame_hist_pos] = interval;
     frame_hist_pos = (frame_hist_pos + 1) % frame_hist;
     if(frame_hist_cnt < frame_hist) frame_hist_cnt++;
 

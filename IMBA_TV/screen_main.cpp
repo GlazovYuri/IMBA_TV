@@ -1,5 +1,6 @@
 #include "screen_main.h"
 #include "config.h"
+#include "euc_values.h"
 #include "GyverOLED.h"
 
 extern GyverOLED<SSH1106_128x64> oled;
@@ -108,45 +109,57 @@ static void drawEucVoltage(int x, int y, euc_data_t& data)
   oled.print("В");
 }
 
-static int cntDigits(uint16_t val)
+// подпись под крупным значением
+static const char* bigLabel(uint8_t value)
 {
-  if(val == 0) return 1;
-
-  int cnt = 0;
-  while(val != 0)
+  switch(value)
   {
-    val /= 10;
-    ++cnt;
+    case EUC_VALUE_SPEED: return "скорость";
+    case EUC_VALUE_PWM: return "ШИМ";
+    case EUC_VALUE_TEMPERATURE: return "температура";
+    default: return "";
   }
-  return cnt;
 }
 
-static void drawEucSpeed(int x, int y, uint16_t speed)
+// число знаков: в UTF-8 считаем только первые байты символов
+static int textChars(const char* text)
 {
-  speed = constrain(speed, 0, 999);
-
-  int digits = cntDigits(speed);
-  oled.setCursorXY(x + (3 - digits) * 12, y);
-  oled.setScale(4);
-  oled.print(speed);
-
-  oled.setCursorXY(x + 11, y + 38);
-  oled.setScale(1);
-  oled.print("скорость");
+  int chars = 0;
+  for(const char* p = text; *p; p++) if((*p & 0xC0) != 0x80) chars++;
+  return chars;
 }
 
-static void drawEucPwm(int x, int y, uint8_t pwm)
+// левый край текста шириной width по центру места [left, right], но не за его пределами.
+// center2 - удвоенная середина: у места чётной ширины она между столбцами
+static int centerX(int center2, int width, int left, int right)
 {
-  pwm = pwm % 100;
+  int x = (center2 - width + 2) / 2;
+  return constrain(x, left, right - width + 1);
+}
 
-  int digits = cntDigits(pwm);
-  oled.setCursorXY(x + (2 - digits) * 12, y);
-  oled.setScale(4);
-  oled.print(pwm);
+// крупное значение и подпись под ним, на своём месте: слева x 0..71, справа 72..127.
+// Число, которое не помещается шрифтом scale 4, выводится мельче, по нижнему краю крупного
+static void drawBigValue(int left, int right, int center2, int y, uint8_t value, euc_data_t& data)
+{
+  char text[12];
+  eucValueText(value, data, text, sizeof(text));
+  int chars = textChars(text);
 
-  oled.setCursorXY(x + 14, y + 38);
+  uint8_t scale = 4;
+  while(scale > 2 && chars * 6 * scale - scale > right - left + 1) scale--;
+  int width = chars * 6 * scale - scale;
+  // мелкое число - по середине всего места, так дальше от соседнего
+  int number_center2 = (scale == 4) ? center2 : left + right;
+  oled.setCursorXY(centerX(number_center2, width, left, right), y + 7 * (4 - scale));
+  oled.setScale(scale);
+  oled.print(text);
+
+  // подпись может выйти за своё место: «температура» справа шире его
+  const char* label = bigLabel(value);
+  width = textChars(label) * 6 - 1;
+  oled.setCursorXY(centerX(center2, width, 0, scr_width - 1), y + 38);
   oled.setScale(1);
-  oled.print("ШИМ");
+  oled.print(label);
 }
 
 void screenMainDraw(uint8_t dev_charge, bool is_charging, euc_data_t& data, bool show_voltage)
@@ -154,8 +167,11 @@ void screenMainDraw(uint8_t dev_charge, bool is_charging, euc_data_t& data, bool
   drawDevCharge(0, 1, dev_charge, is_charging);
   if(show_voltage) drawEucVoltage(47, 1, data);
   else drawEucCharge(47, 1, data.charge);
-  drawEucSpeed(0, 18, data.speed);
-  drawEucPwm(72, 18, data.pwm);
+
+  // середины мест - как у трёх знаков слева и двух справа: x 0..67 и 72..115
+  const fw_config_t& cfg = config();
+  drawBigValue(0, 71, 67, 18, cfg.main_left, data);
+  drawBigValue(72, scr_width - 1, 187, 18, cfg.main_right, data);
 }
 
 void screenNoLinkDraw(uint8_t dev_charge, bool is_charging)
