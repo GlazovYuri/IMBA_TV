@@ -30,10 +30,11 @@ static uint8_t display_mode = 0;
 
 static uint8_t contrast = 255;
 
-// индикатор страниц: точки в правом нижнем углу, видны после нажатия кнопки
+// индикатор страниц: точки в правом нижнем углу, видны после нажатия кнопки.
+// У каждой страницы место 6×6 с точкой 2×2 посередине, у выбранной по краю места рамка
 static const uint32_t mode_dots_show_time = 1500; //ms
-static const int mode_dot_size = 3;
-static const int mode_dot_pitch = 5;
+static const int mode_slot = 6;
+static const int mode_dot_size = 2;
 static bool mode_dots_visible = false;
 static uint32_t mode_dots_time = 0;
 
@@ -110,7 +111,8 @@ void displayNextMode()
   mode_dots_time = millis();
 }
 
-// точки в правом нижнем углу: выбранная страница залита, остальные контуром, под точками чёрная подложка
+// точки в правом нижнем углу: выбранная страница в рамке, под индикатором чёрная подложка.
+// Высота 6 px: на экране версий индикатор помещается под последней строкой
 static void drawModeDots()
 {
   if(!mode_dots_visible) return;
@@ -120,14 +122,15 @@ static void drawModeDots()
     return;
   }
 
-  int width = modes_cnt * mode_dot_pitch - (mode_dot_pitch - mode_dot_size);
-  int x0 = scr_width - width;
-  int y = 64 - mode_dot_size;
-  oled.rect(x0 - 1, y - 1, scr_width - 1, 63, OLED_CLEAR);
+  int x0 = scr_width - modes_cnt * mode_slot;
+  int y0 = 64 - mode_slot;
+  int dot = (mode_slot - mode_dot_size) / 2;
+  oled.rect(x0 - 1, y0 - 1, scr_width - 1, 63, OLED_CLEAR);
   for(int i = 0; i < modes_cnt; i++)
   {
-    int x = x0 + i * mode_dot_pitch;
-    oled.rect(x, y, x + mode_dot_size - 1, 63, (i == display_mode) ? OLED_FILL : OLED_STROKE);
+    int x = x0 + i * mode_slot;
+    oled.rect(x + dot, y0 + dot, x + dot + mode_dot_size - 1, y0 + dot + mode_dot_size - 1, OLED_FILL);
+    if(i == display_mode) oled.rect(x, y0, x + mode_slot - 1, 63, OLED_STROKE);
   }
 }
 
