@@ -3,6 +3,7 @@ import { SerialDfu, DfuError, touch1200, activateWaitTime } from './dfu.js';
 import { BleDfu, BleDfuError, requestDfuDevice } from './ble-dfu.js';
 import { findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues } from './config.js';
 import { serial, serialApi, isAndroid } from './serial.js';
+import { createScreenEditor, screenSlots, isScreenField, changedScreens, describeScreens } from './screen-editor.js';
 
 // USB VID Adafruit: и прошивка, и загрузчик платы (см. boards/boards.txt).
 // PID приложения — 0x80xx, загрузчика — 0x00xx.
@@ -24,6 +25,7 @@ const state = {
   values: null, // настройки для записи в прошивку
   invalid: new Set(), // поля с ошибкой ввода
   openGroups: new Set(), // раскрытые группы настроек
+  screenEditor: null, // редактор экранов, если прошивка его поддерживает
   method: 'usb', // способ прошивки: usb | ble
   token: 0,
   busy: false,
@@ -455,6 +457,7 @@ function renderConfig(values) {
   $('config-empty').hidden = !!cfg;
   form.hidden = $('config-actions').hidden = $('config-note').hidden = !cfg;
 
+  state.screenEditor = null;
   if (!cfg) {
     state.values = null;
     updateButtons();
@@ -486,6 +489,22 @@ function renderConfig(values) {
 
     const fields = document.createElement('div');
     fields.className = 'fields';
+    // экраны настраиваются наглядно, их поля в общий список не попадают
+    const slots = group.widget === 'screens' ? screenSlots(group.fields) : null;
+    if (slots) {
+      state.screenEditor = createScreenEditor({
+        slots,
+        values: () => state.values,
+        options: screenPreviewOptions,
+        isBusy: () => state.busy,
+        onChange: () => {
+          saveValues();
+          updateBadges();
+          updateButtons();
+        },
+      });
+      fields.append(state.screenEditor.element);
+    }
     // section начинает подраздел группы; подпункты собираются в блок под родительской галочкой
     let sub = null;
     // Clawd сидит на черте перед следующим подразделом (или в конце группы), вне дерева подпунктов
@@ -495,6 +514,7 @@ function renderConfig(values) {
       perch = null;
     };
     for (const f of group.fields) {
+      if (slots && isScreenField(f)) continue;
       if (f.widget === 'clawd') {
         perch = renderClawd(f);
         continue;
@@ -529,7 +549,9 @@ function renderConfig(values) {
 function updateBadges() {
   for (const group of state.fw?.config?.schema.groups ?? []) {
     const badge = $('config-form').querySelector(`[data-group="${group.title}"]`);
-    const changed = group.fields.filter((f) => state.values[f.key] !== f.default).length;
+    const slots = group.widget === 'screens' ? screenSlots(group.fields) : null;
+    const changed = group.fields.filter((f) => !(slots && isScreenField(f)) && state.values[f.key] !== f.default).length +
+      (slots ? changedScreens(slots, state.values) : 0);
     badge.textContent = changed ? `изменено: ${changed}` : 'по умолчанию';
     badge.classList.toggle('changed', changed > 0);
   }
@@ -620,6 +642,7 @@ function renderField(f, group) {
       // подсказку «хотя бы один вариант» у соседних флажков тоже убираем
       if (f.type === 'bool') box.parentElement.querySelectorAll('.field-error').forEach((el) => { el.hidden = true; });
       saveValues();
+      state.screenEditor?.refresh();
     } catch (e) {
       error.textContent = e.message;
       error.hidden = false;
@@ -708,6 +731,7 @@ function previewFigure(f) {
 function updateVisibility() {
   for (const f of state.fw?.config?.fields ?? []) {
     const box = $('config-form').querySelector(`[data-key="${f.key}"]`);
+    if (!box) continue;  // поле нарисовано своим редактором (экраны)
     const visible = isVisible(f, state.values);
     // подпункт и Clawd не прячутся, а гаснут: видно, что без родительской галочки они не работают
     if (f.subitem || f.widget === 'clawd') {
@@ -750,13 +774,25 @@ function buildImage(fw) {
 }
 
 function describeSettings(fw, values) {
-  const changed = fw.config.fields.filter((f) => values[f.key] !== f.default);
-  if (!changed.length) return 'по умолчанию';
-  return changed.map((f) => {
+  const slots = screenSlots(fw.config.schema.groups.find((g) => g.widget === 'screens')?.fields ?? []);
+  const changed = fw.config.fields.filter((f) => !(slots && isScreenField(f)) && values[f.key] !== f.default);
+  const parts = changed.map((f) => {
     const v = values[f.key];
     const text = f.type === 'bool' ? (v ? 'да' : 'нет') : f.options?.find((o) => o.value === v)?.label ?? `${v}${f.unit ? ` ${f.unit}` : ''}`;
     return `${f.label}: ${text}`;
-  }).join('; ');
+  });
+  if (slots && changedScreens(slots, values)) parts.unshift(`экраны ${describeScreens(slots, values)}`);
+  return parts.length ? parts.join('; ') : 'по умолчанию';
+}
+
+// Предпросмотр экранов: батарея колеса из настроек, версия - выбранной прошивки
+function screenPreviewOptions() {
+  const tag = state.selected?.kind === 'release' ? state.selected.version.tag : '';
+  return {
+    wheelVoltage: state.values?.wheel_voltage_x10 ?? 1512,
+    firmware: tag.replace(/^v/, '') || '--',
+    bootloader: '--',
+  };
 }
 
 function selectedName() {
@@ -782,6 +818,7 @@ function setBusy(busy) {
   document.querySelectorAll('input[name="firmware"], #file-pick, #show-all, .catalog-row, #config-form input, #config-form select, #config-reset, [role="tab"]')
     .forEach((el) => { el.disabled = busy; });
   if (!busy) updateVisibility();
+  state.screenEditor?.refresh();
   updateButtons();
 }
 

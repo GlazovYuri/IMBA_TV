@@ -54,7 +54,7 @@ test('значения по умолчанию читаются из образ�
 test('настройки записываются только в блок', () => {
   const bin = withBlock(appBin, 2000);
   const cfg = findConfig(bin);
-  const values = { ...defaultValues(cfg), screen_grid: false, brightness: 40, power_off_ms: 2500, intro_break: false };
+  const values = { ...defaultValues(cfg), pwm_alarm: false, brightness: 40, power_off_ms: 2500, intro_break: false };
   const out = applyValues(bin, cfg, values);
 
   assert.deepEqual(readValues(out, cfg), values);
@@ -71,7 +71,7 @@ test('недопустимые значения отклоняются', () => {
   assert.throws(() => checkValue(byKey.power_on_ms, '1.5'), /целое/);
   assert.throws(() => checkValue(byKey.pwm_alarm_source, 9), /недопустимое/);
   assert.equal(checkValue(byKey.wheel_voltage_x10, '840'), 840);
-  assert.throws(() => checkValue(byKey.screen_grid, 1), FirmwareError);
+  assert.throws(() => checkValue(byKey.ble_update, 1), FirmwareError);
 
   const cfg = findConfig(withBlock(appBin));
   assert.throws(() => applyValues(withBlock(appBin), cfg, { ...defaultValues(cfg), brightness: 300 }), FirmwareError);
@@ -98,10 +98,10 @@ test('зависимые поля', () => {
 
 test('сохранённые настройки применяются, если подходят прошивке', () => {
   const cfg = findConfig(withBlock(appBin));
-  const merged = mergeValues(cfg, defaultValues(cfg), { brightness: 30, pwm_alarm_source: 42, unknown: 1, screen_grid: false });
+  const merged = mergeValues(cfg, defaultValues(cfg), { brightness: 30, pwm_alarm_source: 42, unknown: 1, intro_wave: false });
   assert.equal(merged.brightness, 30);
   assert.equal(merged.pwm_alarm_source, 0);
-  assert.equal(merged.screen_grid, false);
+  assert.equal(merged.intro_wave, false);
   assert.ok(!('unknown' in merged));
 });
 
