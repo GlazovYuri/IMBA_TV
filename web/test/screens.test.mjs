@@ -43,9 +43,27 @@ test('предпросмотр рисуется на тех же данных, �
   assert.deepEqual(sample.data, SAMPLE);
 });
 
-test('номера типов и значений как в config.json', () => {
-  const fields = source.groups.flatMap((g) => g.fields);
-  const byKey = Object.fromEntries(fields.map((f) => [f.key, f]));
+// Слоты экранов как в IMBA_TV/config.json. Сайт публикуется с основной ветки и должен проходить тесты и там,
+// где прошивка ещё без слотов, поэтому редактор проверяется на этом описании, а с config.json оно сверяется,
+// когда слоты в нём есть
+const SLOT_DEFAULTS = [
+  [SCREEN.MAIN, VALUE.CHARGE, VALUE.SPEED, VALUE.PWM, VALUE.TRIP],
+  [SCREEN.MAIN, VALUE.VOLTAGE, VALUE.SPEED, VALUE.PWM, VALUE.TRIP],
+  [SCREEN.GRID, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
+  [SCREEN.INFO, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
+  [SCREEN.NONE, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
+];
+const fields = SLOT_DEFAULTS.flatMap(([type, ...v], i) => [
+  { key: `screen${i + 1}_type`, type: 'u8', default: type },
+  ...v.map((d, k) => ({ key: `screen${i + 1}_v${k + 1}`, type: 'u8', default: d })),
+]);
+const sourceFields = source.groups.flatMap((g) => g.fields);
+const configHasScreens = sourceFields.some((f) => f.key === 'screen1_type');
+
+test('номера типов и значений как в config.json', { skip: !configHasScreens && 'в config.json этой ветки нет слотов экранов' }, () => {
+  const byKey = Object.fromEntries(sourceFields.map((f) => [f.key, f]));
+  for (const f of fields) assert.equal(byKey[f.key]?.default, f.default, `${f.key}: значение по умолчанию`);
+  assert.ok(source.groups.some((g) => g.widget === 'screens' && g.fields.some((f) => f.key === 'screen1_type')));
   const ids = (f) => Object.fromEntries(f.options.map((o) => [o.id, o.value]));
   assert.deepEqual(ids(byKey.screen1_type), SCREEN);
   assert.deepEqual(ids(byKey.screen1_v1), VALUE);
@@ -88,7 +106,6 @@ test('у настраиваемых мест варианты, которые п
 
 import { screenSlots, readScreens, writeScreens, moveScreen, newScreen, changedScreens, describeScreens } from '../js/screen-editor.js';
 
-const fields = source.groups.flatMap((g) => g.fields);
 const slots = screenSlots(fields);
 const defaults = () => Object.fromEntries(fields.map((f) => [f.key, f.default]));
 
