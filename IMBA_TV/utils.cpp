@@ -39,6 +39,8 @@ void powerOff()
 
 void systemOff()
 {
+  // в System OFF выводы сохраняют состояние, поэтому гасим светодиод заранее
+  digitalWrite(PIN_LED, LOW);
   sd_power_system_off();
 }
 
