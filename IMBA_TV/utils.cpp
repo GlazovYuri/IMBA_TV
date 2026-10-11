@@ -1,10 +1,9 @@
 #include "utils.h"
+#include "config.h"
 #include <bluefruit.h>
 #include <Arduino.h>
 
 static const uint8_t button_pin = 0;
-static const uint32_t on_delay = 500; //ms
-static const uint32_t off_delay = 1000; //ms
 static const uint32_t button_period = 20; //ms
 
 static bool button_hold = false;
@@ -12,6 +11,19 @@ static bool button_hold = false;
 void softDeviceInit()
 {
   Bluefruit.begin();
+}
+
+const char* bootloaderVersionText()
+{
+  // ядро читает версию, которую загрузчик оставляет в регистре, как 0x00MMmmpp
+  static char text[12] = "";
+  uint32_t v = bootloaderVersion;
+  if(!text[0] && v != 0 && v <= 0xFFFFFF)
+  {
+    snprintf(text, sizeof(text), "%lu.%lu.%lu",
+             (unsigned long)(v >> 16), (unsigned long)((v >> 8) & 0xFF), (unsigned long)(v & 0xFF));
+  }
+  return text;
 }
 
 void powerOn()
@@ -27,6 +39,8 @@ void powerOff()
 
 void systemOff()
 {
+  // в System OFF выводы сохраняют состояние, поэтому гасим светодиод заранее
+  digitalWrite(PIN_LED, LOW);
   sd_power_system_off();
 }
 
@@ -57,17 +71,17 @@ void buttonInitNoSense()
   pinMode(button_pin, INPUT_PULLUP);
 }
 
-static bool buttonState()
+bool buttonPressed()
 {
   return !digitalRead(button_pin);
 }
 
 bool buttonWaitPowerup()
 {
-  uint16_t cnt = on_delay / button_period;
+  uint16_t cnt = config().power_on_ms / button_period;
   while(cnt--)
   {
-    if(!buttonState()) return false;
+    if(!buttonPressed()) return false;
     delay(button_period);
   }
 
@@ -77,7 +91,7 @@ bool buttonWaitPowerup()
 
 button_event_t buttonPoll()
 {
-  bool state = buttonState();
+  bool state = buttonPressed();
   if(button_hold)
   {
     if(!state) button_hold = false;
@@ -95,7 +109,7 @@ button_event_t buttonPoll()
       pressed = true;
       press_time = time;
     }
-    else if(time - press_time > off_delay)
+    else if(time - press_time > config().power_off_ms)
     {
       return BUTTON_LONG;
     }
@@ -103,7 +117,7 @@ button_event_t buttonPoll()
   else if(pressed)
   {
     pressed = false;
-    if(time - press_time <= off_delay) return BUTTON_SHORT;
+    if(time - press_time <= config().power_off_ms) return BUTTON_SHORT;
   }
 
   return BUTTON_NONE;
@@ -111,5 +125,5 @@ button_event_t buttonPoll()
 
 void buttonWaitRelease()
 {
-  while(buttonState()) delay(button_period);
+  while(buttonPressed()) delay(button_period);
 }

@@ -1,21 +1,24 @@
 #include <Adafruit_TinyUSB.h>
+#include "config.h"
 #include "utils.h"
 #include "battery.h"
 #include "ble.h"
 #include "display.h"
 #include "animations.h"
+#include "update_mode.h"
 
-static const uint8_t brightness = 255;
 static const uint32_t update_period = 40; //ms
 
 void setup()
 {
+    configLoad();
     softDeviceInit();
 
     buttonInitSense();
     usbDetectEnable();
     batteryInit();
 
+    bool by_button = false;
     if(isUsbWakeup())
     {
         if(!isUsbConnected()) systemOff();
@@ -29,17 +32,28 @@ void setup()
         }
 
         if(!buttonWaitPowerup()) systemOff();
+        by_button = true;
+    }
+
+    powerOn();
+    delay(100);
+    displayInit();
+    displaySetBrightness(config().brightness);
+
+    // логотип сразу после включения экрана, иначе до первой картинки виден мусор из памяти дисплея.
+    // Режим обновления по Bluetooth: кнопку не отпустили, пока логотип висел, и держат дальше
+    bool held = displayIntroBegin(by_button, batteryGetCharge(), isUsbConnected(), bleGetEucData());
+    if(held && updateModeRequested())
+    {
+        bleInit(true);
+        bleAdvertise(true);
+        updateModeRun();
     }
 
     bleInit();
     bleAdvertise();
 
-    powerOn();
-    delay(100);
-    displayInit();
-    displaySetBrightness(brightness);
-
-    displayPlayIntro(batteryGetCharge(), isUsbConnected(), bleGetEucData());
+    displayIntroFinish(batteryGetCharge(), isUsbConnected(), bleGetEucData());
 }
 
 void loop()

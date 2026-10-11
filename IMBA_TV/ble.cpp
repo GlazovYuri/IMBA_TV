@@ -1,4 +1,5 @@
 #include "ble.h"
+#include "version.h"
 #include <bluefruit.h>
 
 const int8_t tx_power = 8; //dBm
@@ -23,6 +24,7 @@ const uint32_t temperature_offset = 14;
 const uint32_t trip_offset = 16;
 const uint32_t limit_offset = 18;
 
+BLEDfu bledfu;
 BLEDis bledis;
 BLEService euc_service(service_uuid);
 BLECharacteristic euc_char(char_uuid);
@@ -40,6 +42,7 @@ static void frameTimingReset()
   frame_hist_cnt = 0;
   frame_hist_pos = 0;
   euc_data.frame_interval_ms = 0;
+  euc_data.frame_last_interval_ms = 0;
   euc_data.last_frame_ms = 0;
 }
 
@@ -48,7 +51,9 @@ static void frameTimingUpdate()
   uint32_t now = millis();
   if(euc_data.last_frame_ms != 0)
   {
-    frame_intervals[frame_hist_pos] = now - euc_data.last_frame_ms;
+    uint32_t interval = now - euc_data.last_frame_ms;
+    euc_data.frame_last_interval_ms = (interval > UINT16_MAX) ? UINT16_MAX : (interval == 0 ? 1 : interval);
+    frame_intervals[frame_hist_pos] = interval;
     frame_hist_pos = (frame_hist_pos + 1) % frame_hist;
     if(frame_hist_cnt < frame_hist) frame_hist_cnt++;
 
@@ -130,34 +135,42 @@ static void eucCharWriteCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint
   frameTimingUpdate();
 }
 
-void bleInit()
+void bleInit(bool update_mode)
 {
   Bluefruit.setTxPower(tx_power);
+
+  // сервис обновления первым, как в примерах Adafruit
+  if(update_mode) bledfu.begin();
 
   bledis.setManufacturer("IMBA");
   bledis.setModel("IMBA TV");
   bledis.setHardwareRev("0.2");
-  bledis.setFirmwareRev("0.4");
+  bledis.setFirmwareRev(FW_VERSION);
   bledis.begin();
 
-  euc_service.begin();
+  if(!update_mode)
+  {
+    euc_service.begin();
 
-  euc_char.setProperties(CHR_PROPS_WRITE | CHR_PROPS_WRITE_WO_RESP);
-  euc_char.setPermission(SECMODE_NO_ACCESS, SECMODE_OPEN);
-  euc_char.setFixedLen(pack_len);
-  euc_char.setWriteCallback(eucCharWriteCallback);
-  euc_char.begin();
+    euc_char.setProperties(CHR_PROPS_WRITE | CHR_PROPS_WRITE_WO_RESP);
+    euc_char.setPermission(SECMODE_NO_ACCESS, SECMODE_OPEN);
+    euc_char.setFixedLen(pack_len);
+    euc_char.setWriteCallback(eucCharWriteCallback);
+    euc_char.begin();
+  }
 
   Bluefruit.Periph.setConnIntervalMS(20, 30);
   Bluefruit.Periph.setConnectCallback(bleConnectCallback);
   Bluefruit.Periph.setDisconnectCallback(bleDisconnectCallback);
 }
 
-void bleAdvertise()
+void bleAdvertise(bool update_mode)
 {
   Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
   Bluefruit.Advertising.addTxPower();
-  Bluefruit.Advertising.addService(euc_service);
+  // в режиме обновления сайт ищет плату по сервису DFU, а LoEUC её не видит
+  if(update_mode) Bluefruit.Advertising.addService(bledfu);
+  else Bluefruit.Advertising.addService(euc_service);
   Bluefruit.ScanResponse.addName();
 
   Bluefruit.Advertising.restartOnDisconnect(true);

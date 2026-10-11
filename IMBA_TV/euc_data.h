@@ -28,12 +28,13 @@ struct euc_data_t
   uint16_t trip_x10;        // км * 10
 
   uint16_t frame_interval_ms;  // среднее время между кадрами, 0 = ещё не измерено
+  uint16_t frame_last_interval_ms;  // время между двумя последними кадрами
   uint32_t last_frame_ms;      // millis() последнего кадра
 
   euc_data_t()
     : is_connected(false), speed(0), pwm(0), charge(0), pwm_limit(UINT8_MAX), frame_cnt(0),
       present(0), voltage_x10(0), temperature_x10(0), trip_x10(0),
-      frame_interval_ms(0), last_frame_ms(0) {}
+      frame_interval_ms(0), frame_last_interval_ms(0), last_frame_ms(0) {}
 
   void reset()
   {
@@ -47,6 +48,7 @@ struct euc_data_t
     temperature_x10 = 0;
     trip_x10 = 0;
     frame_interval_ms = 0;
+    frame_last_interval_ms = 0;
     last_frame_ms = 0;
   }
 };
