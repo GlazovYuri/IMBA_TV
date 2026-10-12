@@ -19,6 +19,12 @@ constexpr uint8_t kOledAddr = 0x3C;
 constexpr int kExitSystemOff = 0x5F;   // код выхода процесса прошивки при System OFF
 constexpr size_t kMemSize = 64 * 1024; // снимок переменных прошивки
 
+// характеристики LoEUC, по двум младшим байтам UUID
+constexpr uint16_t kCharTelemetry = 0x2c02; // компактный кадр, 20 байт
+constexpr uint16_t kCharSnapshot = 0x2c07;  // снимок, кусками по MTU - 3
+constexpr uint16_t kMtuDefault = 23;
+constexpr int kBleWriteMax = 244;           // MTU 247 - 3
+
 // биты RESETREAS (nRF52840)
 constexpr uint32_t kResetPin = 1u << 0;
 constexpr uint32_t kResetOff = 1u << 16;  // пробуждение из System OFF по GPIO DETECT
@@ -64,7 +70,8 @@ struct BleCmd
 {
   uint8_t type;
   uint8_t len;
-  uint8_t data[64];
+  uint16_t chr; // BLE_WRITE: в какую характеристику, kChar*
+  uint8_t data[kBleWriteMax];
 };
 
 // очередь событий от "телефона" к SoftDevice: один читатель (прошивка), писатели под мьютексом родителя
@@ -170,12 +177,15 @@ struct Board
   std::atomic<uint8_t> adv;
   std::atomic<uint8_t> connected;
   std::atomic<uint8_t> restart_on_disc;
-  std::atomic<uint8_t> char_ready;
+  std::atomic<uint8_t> char_ready;  // характеристика телеметрии ...2c02
+  std::atomic<uint8_t> snap_ready;  // характеристика снимка ...2c07
+  std::atomic<uint16_t> mtu_max;    // MTU, на который соглашается SoftDevice (configPrphBandwidth)
   std::atomic<int8_t> tx_power;
   std::atomic<uint16_t> ci_min_ms;
   std::atomic<uint16_t> ci_max_ms;
   std::atomic<uint32_t> ble_rx;
   std::atomic<uint32_t> ble_rejected;
+  std::atomic<uint32_t> snap_rx;    // принято кусков снимка
   std::atomic<uint32_t> ble_conn_count;
   BleQueue ble_q;
 

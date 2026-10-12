@@ -1,0 +1,47 @@
+# Снимок LoEUC из характеристики ...2c07: телефон шлёт его раз в секунду кусками по MTU - 3 байта.
+# Прошивка собирает куски, проверяет длину и CRC32 и показывает метку времени на последнем экране
+
+button=1
+wait 900
+button=0
+wait 6000
+expect connected=1
+snapts=1791806400000
+
+echo экран снимка последний, после четырёх экранов по умолчанию
+button=1
+wait 150
+button=0
+wait 300
+button=1
+wait 150
+button=0
+wait 300
+button=1
+wait 150
+button=0
+wait 300
+button=1
+wait 150
+button=0
+wait 3000
+shot build/shot-snapshot.png
+
+echo MTU 23: снимок приходит кусками по 20 байт
+mtu=23
+wait 3000
+shot build/shot-snapshot-mtu23.png
+
+echo кривые куски: без куска 0, не та версия нарезки, обрывок заголовка
+chunk=4c450101000100
+chunk=4c4502000000
+chunk=4c45
+wait 2000
+expect cpu=running
+
+echo после разрыва связи экран остаётся
+drop=1
+wait 300
+expect connected=0
+expect cpu=running
+shot build/shot-snapshot-nolink.png
