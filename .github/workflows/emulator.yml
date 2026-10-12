@@ -1,0 +1,29 @@
+# Сценарии эмулятора платы (emulator/scripts/*.emu) на основной ветке.
+# Отдельно от firmware.yml: тот на основной ветке выпускает релиз, а правка эмулятора релиза не требует.
+# Скорость времени 1: часы эмулятора идут сами по себе, а прошивка ждёт через usleep, и на Linux-раннере
+# при ускорении она отстаёт от часов, так что долгое нажатие кнопки проскакивает между опросами.
+name: Emulator
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'IMBA_TV/**'
+      - 'boards/**'
+      - 'emulator/**'
+      - 'Makefile'
+      - '.github/workflows/emulator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # GyverOLED эмулятор скачивает сам, зафиксированной версии (emulator/Makefile)
+      - name: Emulator scenarios
+        run: make emu-test EMU_RATE=1

@@ -4,6 +4,8 @@ SKETCH ?= IMBA_TV
 PORT   ?= $(shell arduino-cli board list | awk '/imba_pro_micro|usbmodem|ttyACM/ {for(i=1;i<=NF;i++) if($$i ~ /^\/dev\//) {print $$i; exit}}')
 # Порт веб-интерфейса эмулятора: make emu EMU_PORT=9000
 EMU_PORT ?= 8080
+# Скорость времени в автотестах эмулятора: make emu-test EMU_RATE=1
+EMU_RATE ?= 4
 
 .PHONY: build upload ports emu emu-san emu-test emu-clean
 
@@ -28,7 +30,7 @@ emu-san:
 
 # автотесты: сценарии emulator/scripts/*.emu без браузера
 emu-test:
-	$(MAKE) -C emulator test
+	$(MAKE) -C emulator test RATE=$(EMU_RATE)
 
 emu-clean:
 	$(MAKE) -C emulator clean
