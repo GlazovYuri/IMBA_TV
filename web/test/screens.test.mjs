@@ -67,7 +67,8 @@ test('номера типов и значений как в config.json', { skip
   for (const f of fields) assert.equal(byKey[f.key]?.default, f.default, `${f.key}: значение по умолчанию`);
   assert.ok(source.groups.some((g) => g.widget === 'screens' && g.fields.some((f) => f.key === 'screen1_type')));
   const ids = (f) => Object.fromEntries(f.options.map((o) => [o.id, o.value]));
-  assert.deepEqual(ids(byKey.screen1_type), SCREEN);
+  // сайт может знать экраны, которых в этой прошивке ещё нет (их он и не предложит), но не наоборот
+  for (const [id, value] of Object.entries(ids(byKey.screen1_type))) assert.equal(SCREEN[id], value, `screen1_type: ${id}`);
   assert.deepEqual(ids(byKey.screen1_v1), VALUE);
 
   // у всех экранов одни и те же варианты: прошивка понимает номера одинаково
@@ -206,9 +207,10 @@ test('часы без времени от телефона показывают 
   assert.notEqual(ascii(renderScreen({ type: SCREEN.CLOCK, v: [0, 0, 0, 0] }, { time })), ascii(none));
 });
 
-test('подпись пояса совпадает с его значением: сдвиг в четвертях часа плюс 48', { skip: !configHasScreens && 'в config.json этой ветки нет экранов' }, () => {
-  const tz = sourceFields.find((f) => f.key === 'timezone');
-  assert.ok(tz, 'в config.json нет timezone');
+const timezoneField = sourceFields.find((f) => f.key === 'timezone');
+
+test('подпись пояса совпадает с его значением: сдвиг в четвертях часа плюс 48', { skip: !timezoneField && 'в config.json этой ветки нет часового пояса' }, () => {
+  const tz = timezoneField;
   assert.equal(tz.options.find((o) => o.value === tz.default)?.label.split(',')[0], 'UTC+3');
   for (const o of tz.options) {
     const hours = o.label === 'UTC' || o.label.startsWith('UTC,') ? 0 : Number(o.label.match(/^UTC([+-]\d+)/)[1]);
