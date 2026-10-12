@@ -88,7 +88,7 @@
 
 Дисплей можно обновить с телефона, без кабеля: сайт передаёт прошивку по Bluetooth. Работает на Android, на компьютере и на iPhone (через браузер Bluefy). Первый раз прошивку с этой функцией нужно залить по USB.
 
-Подробно: [docs/bluetooth-update.md](docs/bluetooth-update.md).
+Подробно: [docs/bluetooth-update.md](docs/bluetooth-update.md). Как обновить загрузчик до 0.10.0: [docs/bootloader-update.md](docs/bootloader-update.md).
 
 ### Если прошивка прервалась
 
