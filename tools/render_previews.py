@@ -260,8 +260,9 @@ def write_screens(path):
                      'charge': charge, 'voltage_x10': voltage, 'temperature_x10': temperature, 'trip_x10': trip,
                      'frame_interval_ms': interval, 'frame_last_interval_ms': last},
         }
-        # часам нужны время от телефона (нет - None) и пояс из настроек
-        if kind == 4:
+        # часам нужны время от телефона (нет - None) и пояс из настроек: экрану часов и экрану
+        # с двумя значениями, у которого часы в верхней строке
+        if kind == 4 or (kind == 1 and v1 == 6):
             case['clock'] = {'unix_ms': unix_ms if has_time else None, 'timezone': timezone}
         case['sha256'] = hashlib.sha256(frame).hexdigest()
         cases.append(case)

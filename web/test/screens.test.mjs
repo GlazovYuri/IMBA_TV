@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { renderScreen, SAMPLE, SAMPLE_DEV_CHARGE, SCREEN, VALUE, SCREEN_TYPES, normalizeScreen } from '../js/screens.js';
+import { renderScreen, SAMPLE, SAMPLE_DEV_CHARGE, SCREEN, VALUE, SCREEN_TYPES, DEFAULT_TIMEZONE, normalizeScreen } from '../js/screens.js';
 
 // Кадры от настоящего кода прошивки, снятые tools/render_previews.py
 const fixtures = JSON.parse(readFileSync(new URL('fixtures/screens.json', import.meta.url), 'utf8'));
@@ -162,7 +162,7 @@ test('рамки мест обводят то, что место рисует, �
   const overlap = (a, b) => a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3];
   const all = [VALUE.SPEED, VALUE.PWM, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP];
   const cases = [];
-  for (const top of [VALUE.CHARGE, VALUE.VOLTAGE]) {
+  for (const top of [VALUE.CHARGE, VALUE.VOLTAGE, VALUE.CLOCK]) {
     for (const l of [VALUE.SPEED, VALUE.PWM, VALUE.TEMPERATURE]) {
       for (const r of [VALUE.SPEED, VALUE.PWM, VALUE.TEMPERATURE]) cases.push({ type: SCREEN.MAIN, v: [top, l, r, 0] });
     }
@@ -188,7 +188,7 @@ test('рамки мест обводят то, что место рисует, �
   }
 });
 
-import { addableTypes } from '../js/screen-editor.js';
+import { addableTypes, selectableValues } from '../js/screen-editor.js';
 
 test('часы предлагаются, только если прошивка их знает', () => {
   assert.deepEqual(addableTypes(slots), [SCREEN.MAIN, SCREEN.GRID, SCREEN.INFO, SCREEN.CLOCK]);
@@ -197,6 +197,33 @@ test('часы предлагаются, только если прошивка 
     ? { ...f, options: [0, 1, 2, 3].map((value) => ({ value })) }
     : f)));
   assert.deepEqual(addableTypes(old), [SCREEN.MAIN, SCREEN.GRID, SCREEN.INFO]);
+});
+
+test('часы в верхней строке предлагаются, только если прошивка их знает', () => {
+  const top = SCREEN_TYPES[SCREEN.MAIN].slots[0].values;
+  const withOptions = (values) => fields.map((f) => (/_v\d$/.test(f.key) ? { ...f, options: values.map((value) => ({ value })) } : f));
+  assert.deepEqual(selectableValues(screenSlots(withOptions(Object.values(VALUE))), top), [VALUE.CHARGE, VALUE.VOLTAGE, VALUE.CLOCK]);
+  // прошивка до часов в верхней строке: варианты screenN_vK без CLOCK
+  const old = screenSlots(withOptions([0, 1, 2, 3, 4, 5]));
+  assert.deepEqual(selectableValues(old, top), [VALUE.CHARGE, VALUE.VOLTAGE]);
+  assert.deepEqual(selectableValues(old, SCREEN_TYPES[SCREEN.GRID].slots[0].values), SCREEN_TYPES[SCREEN.GRID].slots[0].values);
+});
+
+test('часы в верхней строке: время из снимка и заряд колеса в правом углу', () => {
+  const screen = { type: SCREEN.MAIN, v: [VALUE.CLOCK, VALUE.SPEED, VALUE.PWM, VALUE.TRIP] };
+  const time = Date.UTC(2026, 9, 12, 12, 42, 30);
+  const top = (o) => Array.from({ length: 10 }, (_, y) => Array.from({ length: 128 }, (_, x) => o.pixel(x, y)).join('')).join('\n');
+  const none = renderScreen(screen);
+  const at = renderScreen(screen, { time, timezone: DEFAULT_TIMEZONE });
+  assert.notEqual(top(at), top(none));
+  // время на сайте - в выбранном поясе, как у экрана часов
+  assert.notEqual(top(at), top(renderScreen(screen, { time, timezone: DEFAULT_TIMEZONE + 4 })));
+  // заряд колеса доходит до правого края: последний столбец - промежуток за знаком «%»
+  const right = (o) => Math.max(...Array.from({ length: 10 }, (_, y) => Array.from({ length: 128 }, (_, x) => (o.pixel(x, y) ? x : -1))).flat());
+  assert.equal(right(at), 126);
+  // крупные значения те же, что при заряде сверху
+  const big = (o) => Array.from({ length: 54 }, (_, y) => Array.from({ length: 128 }, (_, x) => o.pixel(x, y + 10)).join('')).join('\n');
+  assert.equal(big(at), big(renderScreen({ ...screen, v: [VALUE.CHARGE, VALUE.SPEED, VALUE.PWM, VALUE.TRIP] })));
 });
 
 test('часы без времени от телефона показывают прочерки и не зависят от связи', () => {

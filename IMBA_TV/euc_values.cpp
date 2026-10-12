@@ -7,7 +7,8 @@
 static constexpr bool same(int a, int b) { return a == b; }
 static_assert(same(CONFIG_SCREEN1_V1_SPEED, EUC_VALUE_SPEED) && same(CONFIG_SCREEN1_V1_PWM, EUC_VALUE_PWM) &&
               same(CONFIG_SCREEN1_V1_CHARGE, EUC_VALUE_CHARGE) && same(CONFIG_SCREEN1_V1_VOLTAGE, EUC_VALUE_VOLTAGE) &&
-              same(CONFIG_SCREEN1_V1_TEMPERATURE, EUC_VALUE_TEMPERATURE) && same(CONFIG_SCREEN1_V1_TRIP, EUC_VALUE_TRIP),
+              same(CONFIG_SCREEN1_V1_TEMPERATURE, EUC_VALUE_TEMPERATURE) && same(CONFIG_SCREEN1_V1_TRIP, EUC_VALUE_TRIP) &&
+              same(CONFIG_SCREEN1_V1_CLOCK, EUC_VALUE_CLOCK),
               "config.json: номера значений разошлись с EUC_VALUE_*");
 static_assert(same(CONFIG_SCREEN1_TYPE_NONE, SCREEN_NONE) && same(CONFIG_SCREEN1_TYPE_MAIN, SCREEN_MAIN) &&
               same(CONFIG_SCREEN1_TYPE_GRID, SCREEN_GRID) && same(CONFIG_SCREEN1_TYPE_INFO, SCREEN_INFO) &&

@@ -31,20 +31,27 @@ static void printCentered(int y, const char* text)
   oled.print(text);
 }
 
+bool clockLocalTime(uint32_t& secs, uint32_t& days)
+{
+  uint64_t unix_ms;
+  if(!snapshotTimeMs(unix_ms)) return false;
+  // пояс в настройках - сдвиг от UTC в четвертях часа плюс 48. Метка не раньше 2020 года,
+  // поэтому вычитание не уходит в минус
+  uint64_t local_s = unix_ms / 1000 + config().timezone * 900ULL - 48 * 900ULL;
+  secs = local_s % 86400;
+  days = local_s / 86400;
+  return true;
+}
+
 void screenClockDraw()
 {
   char hours[3] = "--";
   char minutes[3] = "--";
   char date[16] = "--.--";
 
-  uint64_t unix_ms;
-  if(snapshotTimeMs(unix_ms))
+  uint32_t secs, days;
+  if(clockLocalTime(secs, days))
   {
-    // пояс в настройках - сдвиг от UTC в четвертях часа плюс 48. Метка не раньше 2020 года,
-    // поэтому вычитание не уходит в минус
-    uint64_t local_s = unix_ms / 1000 + config().timezone * 900ULL - 48 * 900ULL;
-    uint32_t secs = local_s % 86400;
-    uint32_t days = local_s / 86400;
     snprintf(hours, sizeof(hours), "%02u", (unsigned)(secs / 3600));
     snprintf(minutes, sizeof(minutes), "%02u", (unsigned)(secs / 60 % 60));
 

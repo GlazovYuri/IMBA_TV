@@ -63,10 +63,10 @@ void displayInit()
   {
     screen_t s = slots[i];
     if(s.type == SCREEN_NONE) continue;
-    // у экрана с двумя значениями свои варианты: сверху заряд или напряжение, крупно скорость, ШИМ или температура
+    // у экрана с двумя значениями свои варианты: сверху заряд, напряжение или часы, крупно скорость, ШИМ или температура
     if(s.type == SCREEN_MAIN)
     {
-      if(s.v[0] != EUC_VALUE_VOLTAGE) s.v[0] = EUC_VALUE_CHARGE;
+      if(s.v[0] != EUC_VALUE_VOLTAGE && s.v[0] != EUC_VALUE_CLOCK) s.v[0] = EUC_VALUE_CHARGE;
       if(!isBigValue(s.v[1])) s.v[1] = EUC_VALUE_SPEED;
       if(!isBigValue(s.v[2])) s.v[2] = EUC_VALUE_PWM;
     }

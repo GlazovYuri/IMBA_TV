@@ -257,6 +257,10 @@ static void saveScreens(const char* path)
       }
   const uint8_t main_default[4] = {2, 0, 1, 5};
   writeScreen(f, 1, main_default, 1512, none, 5, false);
+  // часы сверху: снимка ещё не было, на часах прочерки
+  const uint8_t main_clock[4] = {6, 0, 1, 5};
+  writeScreen(f, 1, main_clock, 1512, sample, 82, false);
+  writeScreen(f, 1, main_clock, 1512, none, 5, true);
 
   // сетка: все пары в верхней строке при разных нижних, так проходят все варианты разметки
   uint32_t rnd = 0x1234567u;
@@ -303,6 +307,15 @@ static void saveScreens(const char* path)
     feedSnapshot(c.ts);
     writeScreen(f, 4, grid_default, 1512, sample, 82, false, c.timezone);
   }
+  // часы сверху на экране с двумя значениями: время последнего снимка, заряд колеса от 0 до 100 %
+  euc_data_t low = sampleData();
+  low.charge = 5;
+  euc_data_t empty = sampleData();
+  empty.charge = 0;
+  writeScreen(f, 1, main_clock, 1512, sample, 82, false, CONFIG_TIMEZONE_UTC_P3);
+  writeScreen(f, 1, main_clock, 1512, wide, 100, true, CONFIG_TIMEZONE_UTC_M5);
+  writeScreen(f, 1, main_clock, 1008, low, 9, false, CONFIG_TIMEZONE_UTC_P14);
+  writeScreen(f, 1, main_clock, 840, empty, 100, false, CONFIG_TIMEZONE_UTC_0);
   // время идёт и без связи
   writeScreen(f, 4, grid_default, 1512, off, 82, false);
   // метка не похожа на Unix-время: часов нет

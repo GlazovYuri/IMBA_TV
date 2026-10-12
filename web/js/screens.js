@@ -7,7 +7,7 @@ import { Oled, OLED_FILL, OLED_STROKE, BUF_ADD, BUF_REPLACE, WIDTH } from './ole
 
 // типы экранов и значения - номера из config.json (screenN_type, screenN_v1..v4)
 export const SCREEN = { NONE: 0, MAIN: 1, GRID: 2, INFO: 3, CLOCK: 4 };
-export const VALUE = { SPEED: 0, PWM: 1, CHARGE: 2, VOLTAGE: 3, TEMPERATURE: 4, TRIP: 5 };
+export const VALUE = { SPEED: 0, PWM: 1, CHARGE: 2, VOLTAGE: 3, TEMPERATURE: 4, TRIP: 5, CLOCK: 6 };
 const HAS = { SPEED: 1, PWM: 2, VOLTAGE: 4, CHARGE: 8, TEMPERATURE: 16, TRIP: 32 };
 
 export const VALUE_NAMES = {
@@ -17,6 +17,7 @@ export const VALUE_NAMES = {
   [VALUE.VOLTAGE]: 'Напряжение колеса',
   [VALUE.TEMPERATURE]: 'Температура',
   [VALUE.TRIP]: 'Пробег',
+  [VALUE.CLOCK]: 'Часы',
 };
 
 const BIG_VALUES = [VALUE.SPEED, VALUE.PWM, VALUE.TEMPERATURE];
@@ -26,10 +27,10 @@ const ALL_VALUES = [VALUE.SPEED, VALUE.PWM, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.T
 export const SCREEN_TYPES = {
   [SCREEN.MAIN]: {
     name: 'Два значения',
-    about: 'Крупно два значения, сверху заряд или напряжение колеса',
+    about: 'Крупно два значения, сверху заряд или напряжение колеса либо часы',
     defaults: [VALUE.CHARGE, VALUE.SPEED, VALUE.PWM, VALUE.TRIP],
     slots: [
-      { label: 'Верхняя строка', zone: [46, 0, 82, 11], values: [VALUE.CHARGE, VALUE.VOLTAGE] },
+      { label: 'Верхняя строка', zone: [46, 0, 82, 11], values: [VALUE.CHARGE, VALUE.VOLTAGE, VALUE.CLOCK] },
       { label: 'Крупно слева', zone: [0, 14, 72, 50], values: BIG_VALUES },
       { label: 'Крупно справа', zone: [72, 14, 56, 50], values: BIG_VALUES },
     ],
@@ -81,7 +82,7 @@ export const SAMPLE_DEV_CHARGE = 82;
 export function normalizeScreen(screen) {
   const v = [...screen.v];
   if (screen.type === SCREEN.MAIN) {
-    if (v[0] !== VALUE.VOLTAGE) v[0] = VALUE.CHARGE;
+    if (v[0] !== VALUE.VOLTAGE && v[0] !== VALUE.CLOCK) v[0] = VALUE.CHARGE;
     if (!BIG_VALUES.includes(v[1])) v[1] = VALUE.SPEED;
     if (!BIG_VALUES.includes(v[2])) v[2] = VALUE.PWM;
   }
@@ -201,6 +202,22 @@ function drawEucVoltage(oled, x, y, d, wheelVoltage) {
   oled.print('В');
 }
 
+const WHEEL_BITMAP = [0x20, 0x3c, 0x62, 0xa2, 0xbb, 0xbb, 0xa2, 0x62, 0x3c, 0x20];
+
+function drawClockTop(oled, y, charge, time, timezone) {
+  const local = localTime(time, timezone);
+  let text = local ? `${two(div(local.secs, 3600))}:${two(div(local.secs, 60) % 60)}` : '--:--';
+  oled.setScale(1);
+  oled.setCursorXY(div(WIDTH - (text.length * 6 - 1), 2), y);
+  oled.print(text);
+
+  text = `${constrain(charge, 0, 100)}%`;
+  const textX = WIDTH - text.length * 6;
+  oled.drawBitmap(textX - 3 - WHEEL_BITMAP.length, y, WHEEL_BITMAP, WHEEL_BITMAP.length, 8);
+  oled.setCursorXY(textX, y);
+  oled.print(text);
+}
+
 const BIG_LABELS = { [VALUE.SPEED]: 'скорость', [VALUE.PWM]: 'ШИМ', [VALUE.TEMPERATURE]: 'темп' };
 
 function centerX(center2, width, left, right) {
@@ -226,10 +243,11 @@ function drawBigValue(oled, left, right, center2, y, value, d) {
 }
 
 // oled.tag - номер места на экране (как поля v1..v4): по нему редактор обводит то, что место рисует
-function mainDraw(oled, devCharge, isCharging, d, [top, left, right], wheelVoltage) {
+function mainDraw(oled, devCharge, isCharging, d, [top, left, right], wheelVoltage, time, timezone) {
   drawDevCharge(oled, 0, 1, devCharge, isCharging);
   oled.tag = 0;
   if (top === VALUE.VOLTAGE) drawEucVoltage(oled, 47, 1, d, wheelVoltage);
+  else if (top === VALUE.CLOCK) drawClockTop(oled, 1, d.charge, time, timezone);
   else drawEucCharge(oled, 47, 1, d.charge);
   oled.tag = 1;
   drawBigValue(oled, 0, 71, 67, 18, left, d);
@@ -355,15 +373,21 @@ function printCentered(oled, y, text) {
   oled.print(text);
 }
 
-// time - Unix-время в мс из снимка LoEUC или null, timezone - значение настройки
+// time - Unix-время в мс из снимка LoEUC или null, timezone - значение настройки.
+// Местное время: секунды от начала суток и дни от 1970-01-01, null - времени нет
+function localTime(time, timezone) {
+  if (time == null) return null;
+  const localS = Math.floor(time / 1000) + timezone * 900 - 48 * 900;
+  return { secs: localS % 86400, days: Math.floor(localS / 86400) };
+}
+
 function clockDraw(oled, time, timezone) {
   let hours = '--';
   let minutes = '--';
   let date = '--.--';
-  if (time != null) {
-    const localS = Math.floor(time / 1000) + timezone * 900 - 48 * 900;
-    const secs = localS % 86400;
-    const days = Math.floor(localS / 86400);
+  const local = localTime(time, timezone);
+  if (local) {
+    const { secs, days } = local;
     hours = two(div(secs, 3600));
     minutes = two(div(secs, 60) % 60);
 
@@ -412,6 +436,6 @@ export function renderScreen(screen, {
   else if (s.type === SCREEN.CLOCK) clockDraw(oled, time, timezone);
   else if (!data.is_connected) noLinkDraw(oled, devCharge, isCharging);
   else if (s.type === SCREEN.GRID) gridDraw(oled, data, s.v, wheelVoltage);
-  else mainDraw(oled, devCharge, isCharging, data, s.v, wheelVoltage);
+  else mainDraw(oled, devCharge, isCharging, data, s.v, wheelVoltage, time, timezone);
   return oled;
 }
