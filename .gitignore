@@ -3,3 +3,4 @@ tools/explosion/src_destroy/
 emulator/build/
 emulator/build-san/
 emulator/.deps/
+emulator/scripts/refs/*.actual

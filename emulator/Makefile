@@ -1,7 +1,7 @@
 # Эмулятор платы IMBA TV: прошивка собирается под компьютер с моделью железа.
 #   make            - собрать
 #   make run        - собрать и открыть веб-интерфейс (http://localhost:8080)
-#   make test       - прогнать сценарии scripts/*.emu без интерфейса
+#   make test       - прогнать сценарии scripts/*.emu без интерфейса (RATE=1 - в реальном времени)
 #   make SAN=1 ...  - собрать с AddressSanitizer/UBSan (ловит выход за границы массивов и т.п.)
 
 ROOT  := ..
@@ -10,6 +10,7 @@ BOARD := $(ROOT)/boards/imba_pro_micro
 BUILD := build$(if $(SAN),-san)
 BIN   := $(BUILD)/imba_emu
 PORT  ?= 8080
+RATE  ?= 4
 
 # GyverOLED: берём установленную в Arduino IDE, иначе скачиваем зафиксированную версию
 GYVEROLED_REPO   := https://github.com/GyverLibs/GyverOLED
@@ -62,7 +63,7 @@ run: $(BIN)
 	./$(BIN) --port $(PORT)
 
 test: $(BIN)
-	for s in scripts/*.emu; do ./$(BIN) --headless --rate 4 --script $$s || exit 1; done
+	for s in scripts/*.emu; do ./$(BIN) --headless --rate $(RATE) --script $$s || exit 1; done
 
 clean:
 	rm -rf build build-san

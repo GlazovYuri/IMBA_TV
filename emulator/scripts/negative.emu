@@ -1,0 +1,27 @@
+# Телеметрия со знаком: в протоколе LoEUC поля - int16 со знаком. При езде назад скорость
+# отрицательная, при торможении бывает отрицательным и ШИМ. На экране модуль значения, а не 999 и 253.
+# Эталоны экранов: scripts/refs (верхняя строка с зарядом платы не проверяется, он зависит от шума АЦП)
+
+button=1
+wait 900
+button=0
+wait 6000
+expect connected=1
+
+echo езда назад: скорость -5 км/ч, ШИМ -3%
+speed=-5
+pwm=-3
+wait 300
+expect glass=scripts/refs/negative-main.txt
+
+echo заряд колеса меньше нуля - 0%, а не 100%
+charge=-5
+button=1
+wait 150
+button=0
+wait 300
+button=1
+wait 150
+button=0
+wait 2000
+expect glass=scripts/refs/negative-grid.txt

@@ -94,12 +94,14 @@ static void dataParse(uint8_t* data)
   int16_t tmp;
   uint8_t present = 0;
 
+  // скорость и ШИМ со знаком: назад колесо едет с отрицательной скоростью, при торможении ШИМ
+  // бывает отрицательным. Показывается и сравнивается с порогом модуль, иначе -5 км/ч стало бы 999
   tmp = bytesToInt16(data + speed_offset);
-  euc_data.speed = (tmp == INT16_MIN) ? 0 : tmp / 10;
+  euc_data.speed = (tmp == INT16_MIN) ? 0 : abs(tmp) / 10;
   if(tmp != INT16_MIN) present |= EUC_HAS_SPEED;
 
   tmp = bytesToInt16(data + pwm_offset);
-  euc_data.pwm = (tmp == INT16_MIN) ? 0 : tmp / 10;
+  euc_data.pwm = (tmp == INT16_MIN) ? 0 : constrain(abs(tmp) / 10, 0, UINT8_MAX);
   if(tmp != INT16_MIN) present |= EUC_HAS_PWM;
 
   tmp = bytesToInt16(data + voltage_offset);
@@ -107,7 +109,7 @@ static void dataParse(uint8_t* data)
   if(tmp != INT16_MIN) present |= EUC_HAS_VOLTAGE;
 
   tmp = bytesToInt16(data + charge_offset);
-  euc_data.charge = (tmp == INT16_MIN) ? 0 : tmp / 10;
+  euc_data.charge = (tmp == INT16_MIN) ? 0 : constrain(tmp / 10, 0, 100);
   if(tmp != INT16_MIN) present |= EUC_HAS_CHARGE;
 
   tmp = bytesToInt16(data + temperature_offset);

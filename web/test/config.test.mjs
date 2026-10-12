@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues } from '../js/config.js';
+import {
+  findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues,
+  hasOwnSettings, initialValues, savedValues,
+} from '../js/config.js';
 import { readZip, loadFirmware, makeUf2, withImageCrc, crc16, FirmwareError } from '../js/firmware.js';
 import { schema, fields, defaults, makeBlock, withBlock } from './config-block.mjs';
 
@@ -103,6 +106,40 @@ test('сохранённые настройки применяются, если
   assert.equal(merged.pwm_alarm_source, 0);
   assert.equal(merged.intro_wave, false);
   assert.ok(!('unknown' in merged));
+});
+
+test('настройки, записанные в файл, важнее сохранённых в браузере', () => {
+  const bin = withBlock(appBin);
+  const cfg = findConfig(bin);
+  const saved = { brightness: 90, power_off_ms: 1000 };
+
+  // в блоке значения по умолчанию (релиз, сборка из Arduino IDE): берутся сохранённые в браузере
+  assert.equal(hasOwnSettings(cfg, readValues(bin, cfg)), false);
+  assert.equal(initialValues(cfg, bin, saved).brightness, 90);
+
+  // «UF2 с настройками»: в блоке свои значения, они и показываются
+  const own = applyValues(bin, cfg, { ...defaultValues(cfg), brightness: 40, power_off_ms: 3000 });
+  assert.equal(hasOwnSettings(cfg, readValues(own, cfg)), true);
+  const values = initialValues(cfg, own, saved);
+  assert.equal(values.brightness, 40);
+  assert.equal(values.power_off_ms, 3000);
+});
+
+test('в браузере запоминаются только изменённые настройки', () => {
+  const cfg = findConfig(withBlock(appBin));
+  const values = { ...defaultValues(cfg), brightness: 40 };
+
+  // значения по умолчанию не запоминаются, настройки других версий прошивки остаются
+  const saved = savedValues(cfg, { intro: 3, power_off_ms: 1000, ble_update: false }, values);
+  assert.deepEqual(saved, { intro: 3, brightness: 40 });
+
+  // нетронутая настройка получает новое значение по умолчанию, если оно изменится в новой версии
+  const next = { ...cfg, fields: cfg.fields.map((f) => (f.key === 'power_off_ms' ? { ...f, default: 1500 } : f)) };
+  assert.equal(mergeValues(next, defaultValues(next), saved).power_off_ms, 1500);
+
+  // запомненное раньше значение по умолчанию забывается при следующем сохранении, остальные остаются
+  const old = { brightness: 100, power_off_ms: 2000 };
+  assert.deepEqual(savedValues(cfg, old, old), { power_off_ms: 2000 });
 });
 
 test('повреждённый блок настроек', () => {
