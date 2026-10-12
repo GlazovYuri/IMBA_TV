@@ -51,6 +51,13 @@ export function addableTypes(slots) {
   return options ? ADDABLE.filter((t) => options.some((o) => o.value === t)) : ADDABLE;
 }
 
+// Какие значения можно выбрать на месте: те, что знает выбранная прошивка (варианты screenN_vK в её настройках,
+// у всех полей они одинаковые). Старая прошивка заменила бы незнакомое значение значением по умолчанию
+export function selectableValues(slots, values) {
+  const options = slots[0]?.v[0]?.options;
+  return options ? values.filter((v) => options.some((o) => o.value === v)) : values;
+}
+
 export function newScreen(type) {
   return { type, v: [...(SCREEN_TYPES[type]?.defaults ?? [0, 0, 0, 0])] };
 }
@@ -254,7 +261,7 @@ export function createScreenEditor({ slots, values, options, onChange, isBusy })
     const current = info.slots[slot];
     const legend = el('legend', '', current.label);
     const chips = el('div', 'chips');
-    for (const value of current.values) {
+    for (const value of selectableValues(slots, current.values)) {
       const label = el('label', 'chip');
       const input = el('input');
       input.type = 'radio';
