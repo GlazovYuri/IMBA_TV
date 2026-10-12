@@ -67,9 +67,9 @@ test('номера типов и значений как в config.json', { skip
   for (const f of fields) assert.equal(byKey[f.key]?.default, f.default, `${f.key}: значение по умолчанию`);
   assert.ok(source.groups.some((g) => g.widget === 'screens' && g.fields.some((f) => f.key === 'screen1_type')));
   const ids = (f) => Object.fromEntries(f.options.map((o) => [o.id, o.value]));
-  // сайт может знать экраны, которых в этой прошивке ещё нет (их он и не предложит), но не наоборот
+  // сайт может знать экраны и значения, которых в этой прошивке ещё нет (их он и не предложит), но не наоборот
   for (const [id, value] of Object.entries(ids(byKey.screen1_type))) assert.equal(SCREEN[id], value, `screen1_type: ${id}`);
-  assert.deepEqual(ids(byKey.screen1_v1), VALUE);
+  for (const [id, value] of Object.entries(ids(byKey.screen1_v1))) assert.equal(VALUE[id], value, `screen1_v1: ${id}`);
 
   // у всех экранов одни и те же варианты: прошивка понимает номера одинаково
   for (let n = 1; n <= 5; n++) {
