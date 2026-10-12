@@ -18,6 +18,7 @@ constexpr int kSclPin = 21;
 constexpr uint8_t kOledAddr = 0x3C;
 constexpr int kExitSystemOff = 0x5F;   // код выхода процесса прошивки при System OFF
 constexpr size_t kMemSize = 64 * 1024; // снимок переменных прошивки
+constexpr size_t kCfgMax = 64;         // байтов настроек прошивки (fw_config_t), которые может подменить сценарий
 
 // характеристики LoEUC, по двум младшим байтам UUID
 constexpr uint16_t kCharTelemetry = 0x2c02; // компактный кадр, 20 байт
@@ -141,6 +142,10 @@ struct Board
   std::atomic<uint8_t> button;   // 1 = кнопка нажата (замыкает вывод на землю)
   std::atomic<uint8_t> usb;      // 1 = есть VBUS
   std::atomic<uint32_t> vbat_mv; // напряжение на VDDH
+  // настройки прошивки из сценария (cfg.КЛЮЧ=значение): байты fw_config_t там, где cfg_set не 0.
+  // Подменяются при каждой загрузке платы, как будто их записал в образ сайт
+  uint8_t cfg_set[kCfgMax];
+  uint8_t cfg_val[kCfgMax];
 
   // процессор
   std::atomic<uint8_t> cpu;

@@ -1,12 +1,12 @@
 // Экраны дисплея для редактора на сайте: тот же код, что в прошивке (IMBA_TV/screen_main.cpp, screen_grid.cpp,
-// screen_info.cpp, screen_text.cpp, euc_values.cpp), только рисует в Oled из oled.js.
+// screen_info.cpp, screen_clock.cpp, screen_text.cpp, euc_values.cpp), только рисует в Oled из oled.js.
 // При изменении экранов в прошивке поменяйте и этот файл, затем снимите кадры: python3 tools/render_previews.py.
 // Тест web/test/screens.test.mjs сверяет отрисовку с кадрами от настоящей прошивки.
 
 import { Oled, OLED_FILL, OLED_STROKE, BUF_ADD, BUF_REPLACE, WIDTH } from './oled.js';
 
 // типы экранов и значения - номера из config.json (screenN_type, screenN_v1..v4)
-export const SCREEN = { NONE: 0, MAIN: 1, GRID: 2, INFO: 3 };
+export const SCREEN = { NONE: 0, MAIN: 1, GRID: 2, INFO: 3, CLOCK: 4 };
 export const VALUE = { SPEED: 0, PWM: 1, CHARGE: 2, VOLTAGE: 3, TEMPERATURE: 4, TRIP: 5 };
 const HAS = { SPEED: 1, PWM: 2, VOLTAGE: 4, CHARGE: 8, TEMPERATURE: 16, TRIP: 32 };
 
@@ -51,7 +51,16 @@ export const SCREEN_TYPES = {
     defaults: [VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
     slots: [],
   },
+  [SCREEN.CLOCK]: {
+    name: 'Часы',
+    about: 'Крупно время, под ним день недели и дата. Время приходит из LoEUC, пояс выбирается ниже',
+    defaults: [VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
+    slots: [],
+  },
 };
+
+// пояс по умолчанию (config.json, timezone): сдвиг от UTC в четвертях часа плюс 48, здесь UTC+3
+export const DEFAULT_TIMEZONE = 60;
 
 // Данные для предпросмотра - те же, что у стенда tools/previews/harness.cpp
 export const SAMPLE = {
@@ -335,6 +344,52 @@ function infoDraw(oled, d, linkOk, firmware, bootloader) {
   oled.fastLineH(31, 0, WIDTH - 1);
 }
 
+// ---------- screen_clock.cpp ----------
+
+const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+const two = (n) => String(n).padStart(2, '0');
+
+function printCentered(oled, y, text) {
+  oled.setScale(2);
+  oled.setCursorXY(div(WIDTH - ([...text].length * 12 - 2), 2), y);
+  oled.print(text);
+}
+
+// time - Unix-время в мс из снимка LoEUC или null, timezone - значение настройки
+function clockDraw(oled, time, timezone) {
+  let hours = '--';
+  let minutes = '--';
+  let date = '--.--';
+  if (time != null) {
+    const localS = Math.floor(time / 1000) + timezone * 900 - 48 * 900;
+    const secs = localS % 86400;
+    const days = Math.floor(localS / 86400);
+    hours = two(div(secs, 3600));
+    minutes = two(div(secs, 60) % 60);
+
+    // civil_from_days, как в прошивке
+    const z = days + 719468;
+    const era = div(z, 146097);
+    const doe = z - era * 146097;
+    const yoe = div(doe - div(doe, 1460) + div(doe, 36524) - div(doe, 146096), 365);
+    const doy = doe - (365 * yoe + div(yoe, 4) - div(yoe, 100));
+    const mp = div(5 * doy + 2, 153);
+    const day = doy - div(153 * mp + 2, 5) + 1;
+    const month = mp < 10 ? mp + 3 : mp - 9;
+    date = `${WEEKDAYS[(days + 3) % 7]} ${two(day)}.${two(month)}`;
+  }
+
+  oled.setScale(4);
+  oled.setCursorXY(12, 6);
+  oled.print(hours);
+  oled.setCursorXY(72, 6);
+  oled.print(minutes);
+  oled.rect(62, 13, 65, 16, OLED_FILL);
+  oled.rect(62, 23, 65, 26, OLED_FILL);
+
+  printCentered(oled, 44, date);
+}
+
 // ---------- display.cpp ----------
 
 // Кадр экрана { type, v: [4 значения] } как на дисплее. В oled.boxes - рамки настраиваемых мест:
@@ -346,12 +401,15 @@ export function renderScreen(screen, {
   wheelVoltage = 1512,
   firmware = '',
   bootloader = '',
+  time = null,
+  timezone = DEFAULT_TIMEZONE,
 } = {}) {
   const oled = new Oled();
   const s = normalizeScreen(screen);
   // кадр от телефона пришёл только что: связь показывается, если он подключён и частота уже измерена
   const linkOk = data.is_connected && data.frame_interval_ms !== 0;
   if (s.type === SCREEN.INFO) infoDraw(oled, data, linkOk, firmware, bootloader);
+  else if (s.type === SCREEN.CLOCK) clockDraw(oled, time, timezone);
   else if (!data.is_connected) noLinkDraw(oled, devCharge, isCharging);
   else if (s.type === SCREEN.GRID) gridDraw(oled, data, s.v, wheelVoltage);
   else mainDraw(oled, devCharge, isCharging, data, s.v, wheelVoltage);

@@ -31,6 +31,8 @@ test('экраны на сайте совпадают с прошивкой', ()
       wheelVoltage: c.wheel_voltage_x10,
       firmware: fixtures.firmware,
       bootloader: fixtures.bootloader,
+      time: c.clock?.unix_ms ?? null,
+      timezone: c.clock?.timezone,
     });
     const got = sha256(oled.pages());
     assert.equal(got, c.sha256, `${JSON.stringify(c.screen)} батарея ${c.wheel_voltage_x10}, данные ${JSON.stringify(c.data)}:\n${ascii(oled)}`);
@@ -182,5 +184,34 @@ test('рамки мест обводят то, что место рисует, �
         assert.ok(!overlap(zones[i], zones[k]), `${JSON.stringify(screen)}: рамки ${i} и ${k} пересекаются`);
       }
     }
+  }
+});
+
+import { addableTypes } from '../js/screen-editor.js';
+
+test('часы предлагаются, только если прошивка их знает', () => {
+  assert.deepEqual(addableTypes(slots), [SCREEN.MAIN, SCREEN.GRID, SCREEN.INFO, SCREEN.CLOCK]);
+  // прошивка до часов: варианты screenN_type без CLOCK
+  const old = screenSlots(fields.map((f) => (f.key.endsWith('_type')
+    ? { ...f, options: [0, 1, 2, 3].map((value) => ({ value })) }
+    : f)));
+  assert.deepEqual(addableTypes(old), [SCREEN.MAIN, SCREEN.GRID, SCREEN.INFO]);
+});
+
+test('часы без времени от телефона показывают прочерки и не зависят от связи', () => {
+  const ascii = (o) => Array.from({ length: 64 }, (_, y) => Array.from({ length: 128 }, (_, x) => o.pixel(x, y)).join('')).join('\n');
+  const none = renderScreen({ type: SCREEN.CLOCK, v: [0, 0, 0, 0] });
+  assert.equal(ascii(none), ascii(renderScreen({ type: SCREEN.CLOCK, v: [0, 0, 0, 0] }, { data: { ...SAMPLE, is_connected: false } })));
+  const time = Date.UTC(2026, 9, 12, 12, 0, 30);
+  assert.notEqual(ascii(renderScreen({ type: SCREEN.CLOCK, v: [0, 0, 0, 0] }, { time })), ascii(none));
+});
+
+test('подпись пояса совпадает с его значением: сдвиг в четвертях часа плюс 48', { skip: !configHasScreens && 'в config.json этой ветки нет экранов' }, () => {
+  const tz = sourceFields.find((f) => f.key === 'timezone');
+  assert.ok(tz, 'в config.json нет timezone');
+  assert.equal(tz.options.find((o) => o.value === tz.default)?.label.split(',')[0], 'UTC+3');
+  for (const o of tz.options) {
+    const hours = o.label === 'UTC' || o.label.startsWith('UTC,') ? 0 : Number(o.label.match(/^UTC([+-]\d+)/)[1]);
+    assert.equal(o.value, 48 + hours * 4, o.label);
   }
 });

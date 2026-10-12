@@ -10,7 +10,8 @@ static_assert(same(CONFIG_SCREEN1_V1_SPEED, EUC_VALUE_SPEED) && same(CONFIG_SCRE
               same(CONFIG_SCREEN1_V1_TEMPERATURE, EUC_VALUE_TEMPERATURE) && same(CONFIG_SCREEN1_V1_TRIP, EUC_VALUE_TRIP),
               "config.json: номера значений разошлись с EUC_VALUE_*");
 static_assert(same(CONFIG_SCREEN1_TYPE_NONE, SCREEN_NONE) && same(CONFIG_SCREEN1_TYPE_MAIN, SCREEN_MAIN) &&
-              same(CONFIG_SCREEN1_TYPE_GRID, SCREEN_GRID) && same(CONFIG_SCREEN1_TYPE_INFO, SCREEN_INFO),
+              same(CONFIG_SCREEN1_TYPE_GRID, SCREEN_GRID) && same(CONFIG_SCREEN1_TYPE_INFO, SCREEN_INFO) &&
+              same(CONFIG_SCREEN1_TYPE_CLOCK, SCREEN_CLOCK),
               "config.json: номера типов экранов разошлись с SCREEN_*");
 
 void eucValueText(uint8_t value, const euc_data_t& data, char* text, size_t size)

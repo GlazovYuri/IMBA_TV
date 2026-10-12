@@ -37,6 +37,7 @@
 #include <vector>
 
 #include "shared.h"
+#include "../../IMBA_TV/config_gen.h"
 
 using namespace emu;
 
@@ -715,6 +716,33 @@ static std::string writeHex(const std::string& k, const std::string& v, uint16_t
   return "";
 }
 
+// cfg.КЛЮЧ=значение: настройка прошивки, как её записал бы сайт; действует с ближайшей загрузки платы.
+// Смещение и размер поля берутся из описания настроек, встроенного в прошивку (FW_CONFIG_SCHEMA)
+static std::string setConfig(const std::string& key, const std::string& v)
+{
+  static const std::string schema = FW_CONFIG_SCHEMA;
+  std::string name = "cfg." + key;
+  size_t at = schema.find("\"key\":\"" + key + "\"");
+  if(at == std::string::npos) return name + ": нет такой настройки в config.json";
+  size_t end = schema.find("\"key\":\"", at + 1);
+  auto number = [&](const std::string& field) -> long {
+    size_t p = schema.find("\"" + field + "\":", at);
+    return p < end ? atol(schema.c_str() + p + field.size() + 3) : -1;
+  };
+  long offset = number("offset"), size = number("size");
+  if(offset < 0 || size <= 0 || offset + size > (long)sizeof(fw_config_t)) return name + ": в описании настроек нет адреса поля";
+
+  char* tail = nullptr;
+  long value = v == "true" ? 1 : (v == "false" ? 0 : strtol(v.c_str(), &tail, 0));
+  if(tail && (tail == v.c_str() || *tail)) return name + ": нужно число, true или false";
+  for(long i = 0; i < size; i++)
+  {
+    board->cfg_val[offset + i] = (uint8_t)(value >> (i * 8));
+    board->cfg_set[offset + i] = 1;
+  }
+  return "";
+}
+
 // возвращает текст ошибки или пустую строку
 static std::string applyCmd(const std::string& k, const std::string& v)
 {
@@ -733,6 +761,7 @@ static std::string applyCmd(const std::string& k, const std::string& v)
     if(v == "cold") pending_reset = 0;
     else pending_reset = (int)kResetPin;
   }
+  else if(k.compare(0, 4, "cfg.") == 0) return setConfig(k.substr(4), v);
   else
   {
     std::lock_guard<std::mutex> lk(env_mtx);

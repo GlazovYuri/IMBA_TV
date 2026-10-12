@@ -10,6 +10,7 @@
 #include "animations.h"
 #include "config.h"
 #include "display.h"
+#include "snapshot.h"
 #include "utils.h"
 
 // ===== Время =====
@@ -167,7 +168,8 @@ static euc_data_t wideData()
   return d;
 }
 
-static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t wheel, euc_data_t d, uint8_t dev, bool charging)
+static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t wheel, euc_data_t d, uint8_t dev, bool charging,
+                        uint8_t timezone = CONFIG_TIMEZONE_UTC_P3)
 {
   fw_config_t& cfg = configMut();
   cfg.screen1_type = type;
@@ -177,12 +179,16 @@ static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t whee
   cfg.screen1_v4 = v[3];
   cfg.screen2_type = cfg.screen3_type = cfg.screen4_type = cfg.screen5_type = 0;
   cfg.wheel_voltage_x10 = wheel;
+  cfg.timezone = timezone;
   displayInit();
   d.last_frame_ms = millis() - 10;  // кадр от телефона только что пришёл
+  // время, которое увидят часы: до отрисовки шина не занята, millis() не сдвинется
+  uint64_t unix_ms = 0;
+  bool has_time = snapshotTimeMs(unix_ms);
   displayDrawIface(dev, charging, d);
   frames.clear();
 
-  uint8_t head[32];
+  uint8_t head[48];
   int n = 0;
   head[n++] = type;
   for(int i = 0; i < 4; i++) head[n++] = v[i];
@@ -199,8 +205,34 @@ static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t whee
   head[n++] = d.trip_x10 & 0xFF; head[n++] = d.trip_x10 >> 8;
   head[n++] = d.frame_interval_ms & 0xFF; head[n++] = d.frame_interval_ms >> 8;
   head[n++] = d.frame_last_interval_ms & 0xFF; head[n++] = d.frame_last_interval_ms >> 8;
+  head[n++] = timezone;
+  head[n++] = has_time;
+  for(int i = 0; i < 8; i++) head[n++] = unix_ms >> (i * 8);
   fwrite(head, 1, n, f);
   for(int page = 0; page < 8; page++) fwrite(&ram[page][2], 1, 128, f);
+}
+
+static uint32_t crc32(const uint8_t* data, size_t len)
+{
+  uint32_t crc = 0xFFFFFFFF;
+  while(len--)
+  {
+    crc ^= *data++;
+    for(int i = 0; i < 8; i++) crc = (crc >> 1) ^ (0xEDB88320 & (0 - (crc & 1)));
+  }
+  return ~crc;
+}
+
+// снимок LoEUC без метрик с меткой времени ts одним куском, как его пишет телефон при большом MTU
+static void feedSnapshot(uint64_t ts)
+{
+  uint8_t snap[13] = {'L', 'E', 3, 0};
+  for(int i = 0; i < 8; i++) snap[4 + i] = ts >> (56 - i * 8);
+  uint32_t crc = crc32(snap, sizeof(snap));
+  uint8_t chunk[14 + sizeof(snap)] = {'L', 'E', 1, 1, 0, 0, 0, 0, 0, sizeof(snap),
+                                      (uint8_t)(crc >> 24), (uint8_t)(crc >> 16), (uint8_t)(crc >> 8), (uint8_t)crc};
+  memcpy(chunk + 14, snap, sizeof(snap));
+  snapshotChunk(chunk, sizeof(chunk));
 }
 
 static void saveScreens(const char* path)
@@ -248,6 +280,34 @@ static void saveScreens(const char* path)
   euc_data_t off = sampleData();
   off.is_connected = false;
   writeScreen(f, 3, grid_default, 1512, off, 82, false);
+
+  // часы: без снимков времени нет, потом метки с разными поясами - смена суток, месяца, года и все дни недели
+  writeScreen(f, 4, grid_default, 1512, sample, 82, false);
+  const struct { uint64_t ts; uint8_t timezone; } clocks[] = {
+    {1791806430000ULL, CONFIG_TIMEZONE_UTC_P3},   // пн 12.10.2026 15:00
+    {1791892830000ULL, CONFIG_TIMEZONE_UTC_P3},   // вт 13.10 15:00
+    {1791979230000ULL, CONFIG_TIMEZONE_UTC_P5},   // ср 14.10 17:00
+    {1792065630000ULL, CONFIG_TIMEZONE_UTC_0},    // чт 15.10 12:00
+    {1792152030000ULL, CONFIG_TIMEZONE_UTC_M5},   // пт 16.10 07:00
+    {1792238430000ULL, CONFIG_TIMEZONE_UTC_P3},   // сб 17.10 15:00
+    {1792238430000ULL, CONFIG_TIMEZONE_UTC_P12},  // та же метка на Камчатке: вс 18.10 00:00
+    {1792324830000ULL, CONFIG_TIMEZONE_UTC_P14},  // вс 18.10 12:00 UTC, в UTC+14 уже пн 19.10 02:00
+    {1798756200000ULL, CONFIG_TIMEZONE_UTC_P3},   // 31.12.2026 22:30 UTC, в Москве уже пт 01.01.2027 01:30
+    {1803870900000ULL, CONFIG_TIMEZONE_UTC_M12},  // 01.03.2027 03:15 UTC, в UTC-12 ещё вс 28.02 15:15
+    {1835999999000ULL, CONFIG_TIMEZONE_UTC_0},    // пн 06.03.2028 23:59:59
+    {1835438400000ULL, CONFIG_TIMEZONE_UTC_P10},  // високосный год: вт 29.02.2028 22:00
+  };
+
+  for(const auto& c : clocks)
+  {
+    feedSnapshot(c.ts);
+    writeScreen(f, 4, grid_default, 1512, sample, 82, false, c.timezone);
+  }
+  // время идёт и без связи
+  writeScreen(f, 4, grid_default, 1512, off, 82, false);
+  // метка не похожа на Unix-время: часов нет
+  feedSnapshot(123456789ULL);
+  writeScreen(f, 4, grid_default, 1512, sample, 82, false);
   fclose(f);
 }
 

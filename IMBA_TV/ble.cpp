@@ -1,6 +1,6 @@
 #include "ble.h"
 #include "version.h"
-#include "screen_snapshot.h"
+#include "snapshot.h"
 #include <bluefruit.h>
 
 const int8_t tx_power = 8; //dBm

@@ -34,6 +34,7 @@ struct __attribute__((packed)) fw_config_t
   uint8_t screen5_v3;  // Экран 5, поле 3
   uint8_t screen5_v4;  // Экран 5, поле 4
   uint16_t wheel_voltage_x10;  // Батарея колеса
+  uint8_t timezone;  // Часовой пояс
   uint8_t pwm_alarm;  // Мигать экраном при превышении порога ШИМ
   uint8_t pwm_alarm_source;  // Порог
   uint8_t pwm_alarm_threshold;  // Свой порог ШИМ
@@ -49,9 +50,9 @@ struct __attribute__((packed)) fw_config_t
   uint8_t ble_update;  // Разрешить обновление прошивки по Bluetooth
 };
 
-static_assert(sizeof(fw_config_t) == 42, "config.json и fw_config_t разошлись");
+static_assert(sizeof(fw_config_t) == 43, "config.json и fw_config_t разошлись");
 
-#define FW_CONFIG_DEFAULTS { 1, 2, 0, 1, 5, 1, 3, 0, 1, 5, 2, 2, 3, 4, 5, 3, 2, 3, 4, 5, 0, 2, 3, 4, 5, 1512, 1, 0, 80, 100, 1, 0, 1, 1, 1, 1, 500, 1000, 1 }
+#define FW_CONFIG_DEFAULTS { 1, 2, 0, 1, 5, 1, 3, 0, 1, 5, 2, 2, 3, 4, 5, 3, 2, 3, 4, 5, 0, 2, 3, 4, 5, 1512, 60, 1, 0, 80, 100, 1, 0, 1, 1, 1, 1, 500, 1000, 1 }
 
 enum
 {
@@ -59,6 +60,7 @@ enum
   CONFIG_SCREEN1_TYPE_MAIN = 1,
   CONFIG_SCREEN1_TYPE_GRID = 2,
   CONFIG_SCREEN1_TYPE_INFO = 3,
+  CONFIG_SCREEN1_TYPE_CLOCK = 4,
   CONFIG_SCREEN1_V1_SPEED = 0,
   CONFIG_SCREEN1_V1_PWM = 1,
   CONFIG_SCREEN1_V1_CHARGE = 2,
@@ -87,6 +89,7 @@ enum
   CONFIG_SCREEN2_TYPE_MAIN = 1,
   CONFIG_SCREEN2_TYPE_GRID = 2,
   CONFIG_SCREEN2_TYPE_INFO = 3,
+  CONFIG_SCREEN2_TYPE_CLOCK = 4,
   CONFIG_SCREEN2_V1_SPEED = 0,
   CONFIG_SCREEN2_V1_PWM = 1,
   CONFIG_SCREEN2_V1_CHARGE = 2,
@@ -115,6 +118,7 @@ enum
   CONFIG_SCREEN3_TYPE_MAIN = 1,
   CONFIG_SCREEN3_TYPE_GRID = 2,
   CONFIG_SCREEN3_TYPE_INFO = 3,
+  CONFIG_SCREEN3_TYPE_CLOCK = 4,
   CONFIG_SCREEN3_V1_SPEED = 0,
   CONFIG_SCREEN3_V1_PWM = 1,
   CONFIG_SCREEN3_V1_CHARGE = 2,
@@ -143,6 +147,7 @@ enum
   CONFIG_SCREEN4_TYPE_MAIN = 1,
   CONFIG_SCREEN4_TYPE_GRID = 2,
   CONFIG_SCREEN4_TYPE_INFO = 3,
+  CONFIG_SCREEN4_TYPE_CLOCK = 4,
   CONFIG_SCREEN4_V1_SPEED = 0,
   CONFIG_SCREEN4_V1_PWM = 1,
   CONFIG_SCREEN4_V1_CHARGE = 2,
@@ -171,6 +176,7 @@ enum
   CONFIG_SCREEN5_TYPE_MAIN = 1,
   CONFIG_SCREEN5_TYPE_GRID = 2,
   CONFIG_SCREEN5_TYPE_INFO = 3,
+  CONFIG_SCREEN5_TYPE_CLOCK = 4,
   CONFIG_SCREEN5_V1_SPEED = 0,
   CONFIG_SCREEN5_V1_PWM = 1,
   CONFIG_SCREEN5_V1_CHARGE = 2,
@@ -202,6 +208,33 @@ enum
   CONFIG_WHEEL_VOLTAGE_X10_36S = 1512,
   CONFIG_WHEEL_VOLTAGE_X10_40S = 1680,
   CONFIG_WHEEL_VOLTAGE_X10_42S = 1764,
+  CONFIG_TIMEZONE_UTC_M12 = 0,
+  CONFIG_TIMEZONE_UTC_M11 = 4,
+  CONFIG_TIMEZONE_UTC_M10 = 8,
+  CONFIG_TIMEZONE_UTC_M9 = 12,
+  CONFIG_TIMEZONE_UTC_M8 = 16,
+  CONFIG_TIMEZONE_UTC_M7 = 20,
+  CONFIG_TIMEZONE_UTC_M6 = 24,
+  CONFIG_TIMEZONE_UTC_M5 = 28,
+  CONFIG_TIMEZONE_UTC_M4 = 32,
+  CONFIG_TIMEZONE_UTC_M3 = 36,
+  CONFIG_TIMEZONE_UTC_M2 = 40,
+  CONFIG_TIMEZONE_UTC_M1 = 44,
+  CONFIG_TIMEZONE_UTC_0 = 48,
+  CONFIG_TIMEZONE_UTC_P1 = 52,
+  CONFIG_TIMEZONE_UTC_P2 = 56,
+  CONFIG_TIMEZONE_UTC_P3 = 60,
+  CONFIG_TIMEZONE_UTC_P4 = 64,
+  CONFIG_TIMEZONE_UTC_P5 = 68,
+  CONFIG_TIMEZONE_UTC_P6 = 72,
+  CONFIG_TIMEZONE_UTC_P7 = 76,
+  CONFIG_TIMEZONE_UTC_P8 = 80,
+  CONFIG_TIMEZONE_UTC_P9 = 84,
+  CONFIG_TIMEZONE_UTC_P10 = 88,
+  CONFIG_TIMEZONE_UTC_P11 = 92,
+  CONFIG_TIMEZONE_UTC_P12 = 96,
+  CONFIG_TIMEZONE_UTC_P13 = 100,
+  CONFIG_TIMEZONE_UTC_P14 = 104,
   CONFIG_PWM_ALARM_SOURCE_APP = 0,
   CONFIG_PWM_ALARM_SOURCE_FIXED = 1,
 };
@@ -209,32 +242,33 @@ enum
 // Значения вне допустимых заменяются значениями по умолчанию
 static inline void configSanitize(fw_config_t& c)
 {
-  switch(c.screen1_type) { case 0: case 1: case 2: case 3: break; default: c.screen1_type = 1; }
+  switch(c.screen1_type) { case 0: case 1: case 2: case 3: case 4: break; default: c.screen1_type = 1; }
   switch(c.screen1_v1) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen1_v1 = 2; }
   switch(c.screen1_v2) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen1_v2 = 0; }
   switch(c.screen1_v3) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen1_v3 = 1; }
   switch(c.screen1_v4) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen1_v4 = 5; }
-  switch(c.screen2_type) { case 0: case 1: case 2: case 3: break; default: c.screen2_type = 1; }
+  switch(c.screen2_type) { case 0: case 1: case 2: case 3: case 4: break; default: c.screen2_type = 1; }
   switch(c.screen2_v1) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen2_v1 = 3; }
   switch(c.screen2_v2) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen2_v2 = 0; }
   switch(c.screen2_v3) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen2_v3 = 1; }
   switch(c.screen2_v4) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen2_v4 = 5; }
-  switch(c.screen3_type) { case 0: case 1: case 2: case 3: break; default: c.screen3_type = 2; }
+  switch(c.screen3_type) { case 0: case 1: case 2: case 3: case 4: break; default: c.screen3_type = 2; }
   switch(c.screen3_v1) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen3_v1 = 2; }
   switch(c.screen3_v2) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen3_v2 = 3; }
   switch(c.screen3_v3) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen3_v3 = 4; }
   switch(c.screen3_v4) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen3_v4 = 5; }
-  switch(c.screen4_type) { case 0: case 1: case 2: case 3: break; default: c.screen4_type = 3; }
+  switch(c.screen4_type) { case 0: case 1: case 2: case 3: case 4: break; default: c.screen4_type = 3; }
   switch(c.screen4_v1) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen4_v1 = 2; }
   switch(c.screen4_v2) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen4_v2 = 3; }
   switch(c.screen4_v3) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen4_v3 = 4; }
   switch(c.screen4_v4) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen4_v4 = 5; }
-  switch(c.screen5_type) { case 0: case 1: case 2: case 3: break; default: c.screen5_type = 0; }
+  switch(c.screen5_type) { case 0: case 1: case 2: case 3: case 4: break; default: c.screen5_type = 0; }
   switch(c.screen5_v1) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen5_v1 = 2; }
   switch(c.screen5_v2) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen5_v2 = 3; }
   switch(c.screen5_v3) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen5_v3 = 4; }
   switch(c.screen5_v4) { case 0: case 1: case 2: case 3: case 4: case 5: break; default: c.screen5_v4 = 5; }
   switch(c.wheel_voltage_x10) { case 840: case 1008: case 1260: case 1344: case 1512: case 1680: case 1764: break; default: c.wheel_voltage_x10 = 1512; }
+  switch(c.timezone) { case 0: case 4: case 8: case 12: case 16: case 20: case 24: case 28: case 32: case 36: case 40: case 44: case 48: case 52: case 56: case 60: case 64: case 68: case 72: case 76: case 80: case 84: case 88: case 92: case 96: case 100: case 104: break; default: c.timezone = 60; }
   if(c.pwm_alarm > 1) c.pwm_alarm = 1;
   switch(c.pwm_alarm_source) { case 0: case 1: break; default: c.pwm_alarm_source = 0; }
   if(c.pwm_alarm_threshold < 30 || c.pwm_alarm_threshold > 99) c.pwm_alarm_threshold = 80;
@@ -258,140 +292,159 @@ static inline void configSanitize(fw_config_t& c)
   "крана с двумя значениями 1 - верхняя строка (заряд или напряжение), 2 и 3 - крупные значения сле" \
   "ва и справа; у сетки 1-4 - клетки по строкам\",\"options\":[{\"value\":0,\"id\":\"NONE\",\"label\":\"Нет\"},{" \
   "\"value\":1,\"id\":\"MAIN\",\"label\":\"Два значения\"},{\"value\":2,\"id\":\"GRID\",\"label\":\"Четыре значения\"}," \
-  "{\"value\":3,\"id\":\"INFO\",\"label\":\"Связь и версии\"}],\"offset\":0,\"size\":1},{\"key\":\"screen1_v1\",\"type" \
-  "\":\"u8\",\"default\":2,\"label\":\"Экран 1, поле 1\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорост" \
-  "ь, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса" \
-  ", %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"l" \
-  "abel\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":1,\"size\":1},{\"ke" \
-  "y\":\"screen1_v2\",\"type\":\"u8\",\"default\":0,\"label\":\"Экран 1, поле 2\",\"options\":[{\"value\":0,\"id\":\"SP" \
-  "EED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\"," \
-  "\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4," \
-  "\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"off" \
-  "set\":2,\"size\":1},{\"key\":\"screen1_v3\",\"type\":\"u8\",\"default\":1,\"label\":\"Экран 1, поле 3\",\"options\"" \
-  ":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"va" \
-  "lue\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение ко" \
-  "леса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label" \
-  "\":\"Пробег, км\"}],\"offset\":3,\"size\":1},{\"key\":\"screen1_v4\",\"type\":\"u8\",\"default\":5,\"label\":\"Экран" \
-  " 1, поле 4\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"" \
-  "label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"" \
-  "label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\"" \
-  ":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":4,\"size\":1},{\"key\":\"screen2_type\",\"type\":\"u8\",\"de" \
-  "fault\":1,\"label\":\"Экран 2\",\"options\":[{\"value\":0,\"id\":\"NONE\",\"label\":\"Нет\"},{\"value\":1,\"id\":\"MAI" \
-  "N\",\"label\":\"Два значения\"},{\"value\":2,\"id\":\"GRID\",\"label\":\"Четыре значения\"},{\"value\":3,\"id\":\"IN" \
-  "FO\",\"label\":\"Связь и версии\"}],\"offset\":5,\"size\":1},{\"key\":\"screen2_v1\",\"type\":\"u8\",\"default\":3," \
-  "\"label\":\"Экран 2, поле 1\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":" \
-  "1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"i" \
-  "d\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура," \
-  " °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":6,\"size\":1},{\"key\":\"screen2_v2\",\"ty" \
-  "pe\":\"u8\",\"default\":0,\"label\":\"Экран 2, поле 2\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скоро" \
-  "сть, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд коле" \
-  "са, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\"," \
-  "\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":7,\"size\":1},{\"" \
-  "key\":\"screen2_v3\",\"type\":\"u8\",\"default\":1,\"label\":\"Экран 2, поле 3\",\"options\":[{\"value\":0,\"id\":\"" \
-  "SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE" \
-  "\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":" \
-  "4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"o" \
-  "ffset\":8,\"size\":1},{\"key\":\"screen2_v4\",\"type\":\"u8\",\"default\":5,\"label\":\"Экран 2, поле 4\",\"option" \
-  "s\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"" \
-  "value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение " \
-  "колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"lab" \
-  "el\":\"Пробег, км\"}],\"offset\":9,\"size\":1},{\"key\":\"screen3_type\",\"type\":\"u8\",\"default\":2,\"label\":\"Э" \
-  "кран 3\",\"options\":[{\"value\":0,\"id\":\"NONE\",\"label\":\"Нет\"},{\"value\":1,\"id\":\"MAIN\",\"label\":\"Два зна" \
-  "чения\"},{\"value\":2,\"id\":\"GRID\",\"label\":\"Четыре значения\"},{\"value\":3,\"id\":\"INFO\",\"label\":\"Связь " \
-  "и версии\"}],\"offset\":10,\"size\":1},{\"key\":\"screen3_v1\",\"type\":\"u8\",\"default\":2,\"label\":\"Экран 3, " \
-  "поле 1\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"labe" \
-  "l\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"labe" \
-  "l\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"" \
-  "id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":11,\"size\":1},{\"key\":\"screen3_v2\",\"type\":\"u8\",\"default" \
-  "\":3,\"label\":\"Экран 3, поле 2\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"val" \
-  "ue\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":" \
-  "3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температ" \
-  "ура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":12,\"size\":1},{\"key\":\"screen3_v3" \
-  "\",\"type\":\"u8\",\"default\":4,\"label\":\"Экран 3, поле 3\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"" \
+  "{\"value\":3,\"id\":\"INFO\",\"label\":\"Связь и версии\"},{\"value\":4,\"id\":\"CLOCK\",\"label\":\"Часы\"}],\"offse" \
+  "t\":0,\"size\":1},{\"key\":\"screen1_v1\",\"type\":\"u8\",\"default\":2,\"label\":\"Экран 1, поле 1\",\"options\":[" \
+  "{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"valu" \
+  "e\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение коле" \
+  "са, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":" \
+  "\"Пробег, км\"}],\"offset\":1,\"size\":1},{\"key\":\"screen1_v2\",\"type\":\"u8\",\"default\":0,\"label\":\"Экран 1" \
+  ", поле 2\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"la" \
+  "bel\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"la" \
+  "bel\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5" \
+  ",\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":2,\"size\":1},{\"key\":\"screen1_v3\",\"type\":\"u8\",\"defaul" \
+  "t\":1,\"label\":\"Экран 1, поле 3\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"va" \
+  "lue\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\"" \
+  ":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Темпера" \
+  "тура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":3,\"size\":1},{\"key\":\"screen1_v4" \
+  "\",\"type\":\"u8\",\"default\":5,\"label\":\"Экран 1, поле 4\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"" \
   "Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд" \
   " колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERAT" \
-  "URE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":13,\"size\"" \
-  ":1},{\"key\":\"screen3_v4\",\"type\":\"u8\",\"default\":5,\"label\":\"Экран 3, поле 4\",\"options\":[{\"value\":0," \
-  "\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"" \
-  "CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"v" \
-  "alue\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км" \
-  "\"}],\"offset\":14,\"size\":1},{\"key\":\"screen4_type\",\"type\":\"u8\",\"default\":3,\"label\":\"Экран 4\",\"optio" \
-  "ns\":[{\"value\":0,\"id\":\"NONE\",\"label\":\"Нет\"},{\"value\":1,\"id\":\"MAIN\",\"label\":\"Два значения\"},{\"valu" \
-  "e\":2,\"id\":\"GRID\",\"label\":\"Четыре значения\"},{\"value\":3,\"id\":\"INFO\",\"label\":\"Связь и версии\"}],\"o" \
-  "ffset\":15,\"size\":1},{\"key\":\"screen4_v1\",\"type\":\"u8\",\"default\":2,\"label\":\"Экран 4, поле 1\",\"optio" \
-  "ns\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{" \
-  "\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение" \
-  " колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"la" \
-  "bel\":\"Пробег, км\"}],\"offset\":16,\"size\":1},{\"key\":\"screen4_v2\",\"type\":\"u8\",\"default\":3,\"label\":\"Э" \
-  "кран 4, поле 2\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PW" \
-  "M\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAG" \
-  "E\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"va" \
-  "lue\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":17,\"size\":1},{\"key\":\"screen4_v3\",\"type\":\"u8\"," \
-  "\"default\":4,\"label\":\"Экран 4, поле 3\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч" \
-  "\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{" \
-  "\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"" \
-  "Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":18,\"size\":1},{\"key\":\"sc" \
-  "reen4_v4\",\"type\":\"u8\",\"default\":5,\"label\":\"Экран 4, поле 4\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"" \
-  "label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label" \
-  "\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"" \
-  "TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":1" \
-  "9,\"size\":1},{\"key\":\"screen5_type\",\"type\":\"u8\",\"default\":0,\"label\":\"Экран 5\",\"options\":[{\"value\":" \
-  "0,\"id\":\"NONE\",\"label\":\"Нет\"},{\"value\":1,\"id\":\"MAIN\",\"label\":\"Два значения\"},{\"value\":2,\"id\":\"GRI" \
-  "D\",\"label\":\"Четыре значения\"},{\"value\":3,\"id\":\"INFO\",\"label\":\"Связь и версии\"}],\"offset\":20,\"siz" \
-  "e\":1},{\"key\":\"screen5_v1\",\"type\":\"u8\",\"default\":2,\"label\":\"Экран 5, поле 1\",\"options\":[{\"value\":" \
+  "URE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":4,\"size\":" \
+  "1},{\"key\":\"screen2_type\",\"type\":\"u8\",\"default\":1,\"label\":\"Экран 2\",\"options\":[{\"value\":0,\"id\":\"N" \
+  "ONE\",\"label\":\"Нет\"},{\"value\":1,\"id\":\"MAIN\",\"label\":\"Два значения\"},{\"value\":2,\"id\":\"GRID\",\"label" \
+  "\":\"Четыре значения\"},{\"value\":3,\"id\":\"INFO\",\"label\":\"Связь и версии\"},{\"value\":4,\"id\":\"CLOCK\",\"l" \
+  "abel\":\"Часы\"}],\"offset\":5,\"size\":1},{\"key\":\"screen2_v1\",\"type\":\"u8\",\"default\":3,\"label\":\"Экран 2" \
+  ", поле 1\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"la" \
+  "bel\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"la" \
+  "bel\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5" \
+  ",\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":6,\"size\":1},{\"key\":\"screen2_v2\",\"type\":\"u8\",\"defaul" \
+  "t\":0,\"label\":\"Экран 2, поле 2\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"va" \
+  "lue\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\"" \
+  ":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Темпера" \
+  "тура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":7,\"size\":1},{\"key\":\"screen2_v3" \
+  "\",\"type\":\"u8\",\"default\":1,\"label\":\"Экран 2, поле 3\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"" \
+  "Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд" \
+  " колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERAT" \
+  "URE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":8,\"size\":" \
+  "1},{\"key\":\"screen2_v4\",\"type\":\"u8\",\"default\":5,\"label\":\"Экран 2, поле 4\",\"options\":[{\"value\":0,\"" \
+  "id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"C" \
+  "HARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"va" \
+  "lue\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"" \
+  "}],\"offset\":9,\"size\":1},{\"key\":\"screen3_type\",\"type\":\"u8\",\"default\":2,\"label\":\"Экран 3\",\"options" \
+  "\":[{\"value\":0,\"id\":\"NONE\",\"label\":\"Нет\"},{\"value\":1,\"id\":\"MAIN\",\"label\":\"Два значения\"},{\"value\"" \
+  ":2,\"id\":\"GRID\",\"label\":\"Четыре значения\"},{\"value\":3,\"id\":\"INFO\",\"label\":\"Связь и версии\"},{\"val" \
+  "ue\":4,\"id\":\"CLOCK\",\"label\":\"Часы\"}],\"offset\":10,\"size\":1},{\"key\":\"screen3_v1\",\"type\":\"u8\",\"defau" \
+  "lt\":2,\"label\":\"Экран 3, поле 1\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"v" \
+  "alue\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value" \
+  "\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Темпер" \
+  "атура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":11,\"size\":1},{\"key\":\"screen3_" \
+  "v2\",\"type\":\"u8\",\"default\":3,\"label\":\"Экран 3, поле 2\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\"" \
+  ":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Зар" \
+  "яд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPER" \
+  "ATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":12,\"siz" \
+  "e\":1},{\"key\":\"screen3_v3\",\"type\":\"u8\",\"default\":4,\"label\":\"Экран 3, поле 3\",\"options\":[{\"value\":" \
   "0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\"" \
   ":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{" \
   "\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, " \
-  "км\"}],\"offset\":21,\"size\":1},{\"key\":\"screen5_v2\",\"type\":\"u8\",\"default\":3,\"label\":\"Экран 5, поле 2" \
+  "км\"}],\"offset\":13,\"size\":1},{\"key\":\"screen3_v4\",\"type\":\"u8\",\"default\":5,\"label\":\"Экран 3, поле 4" \
   "\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИ" \
   "М, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"На" \
   "пряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"T" \
-  "RIP\",\"label\":\"Пробег, км\"}],\"offset\":22,\"size\":1},{\"key\":\"screen5_v3\",\"type\":\"u8\",\"default\":4,\"l" \
-  "abel\":\"Экран 5, поле 3\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1," \
-  "\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\"" \
-  ":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °" \
-  "C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":23,\"size\":1},{\"key\":\"screen5_v4\",\"typ" \
-  "e\":\"u8\",\"default\":5,\"label\":\"Экран 5, поле 4\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорос" \
-  "ть, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колес" \
-  "а, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"" \
-  "label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":24,\"size\":1},{\"" \
-  "key\":\"wheel_voltage_x10\",\"type\":\"u16\",\"default\":1512,\"label\":\"Батарея колеса\",\"help\":\"По максима" \
-  "льному напряжению рассчитывается место под цифры напряжения на экранах\",\"options\":[{\"value\":840," \
-  "\"id\":\"20S\",\"label\":\"84 В (20S)\"},{\"value\":1008,\"id\":\"24S\",\"label\":\"100,8 В (24S)\"},{\"value\":1260" \
-  ",\"id\":\"30S\",\"label\":\"126 В (30S)\"},{\"value\":1344,\"id\":\"32S\",\"label\":\"134,4 В (32S)\"},{\"value\":15" \
-  "12,\"id\":\"36S\",\"label\":\"151,2 В (36S)\"},{\"value\":1680,\"id\":\"40S\",\"label\":\"168 В (40S)\"},{\"value\":" \
-  "1764,\"id\":\"42S\",\"label\":\"176,4 В (42S)\"}],\"offset\":25,\"size\":2}]},{\"title\":\"Предупреждение о ШИМ" \
-  "\",\"help\":\"Мигание экрана, когда ШИМ подходит к пределу\",\"fields\":[{\"key\":\"pwm_alarm\",\"type\":\"boo" \
-  "l\",\"default\":true,\"label\":\"Мигать экраном при превышении порога ШИМ\",\"help\":\"Чем выше ШИМ, тем ч" \
-  "аще мигание\",\"offset\":27,\"size\":1},{\"key\":\"pwm_alarm_source\",\"type\":\"u8\",\"default\":0,\"label\":\"По" \
-  "рог\",\"options\":[{\"value\":0,\"id\":\"APP\",\"label\":\"Из настроек приложения LoEUC\"},{\"value\":1,\"id\":\"F" \
-  "IXED\",\"label\":\"Свой\"}],\"depends\":{\"pwm_alarm\":true},\"offset\":28,\"size\":1},{\"key\":\"pwm_alarm_thre" \
-  "shold\",\"type\":\"u8\",\"default\":80,\"min\":30,\"max\":99,\"unit\":\"%\",\"label\":\"Свой порог ШИМ\",\"depends\":" \
-  "{\"pwm_alarm\":true,\"pwm_alarm_source\":1},\"offset\":29,\"size\":1}]},{\"title\":\"Дисплей\",\"help\":\"Яркос" \
-  "ть экрана\",\"fields\":[{\"key\":\"brightness\",\"type\":\"u8\",\"default\":100,\"min\":5,\"max\":100,\"step\":5,\"u" \
-  "nit\":\"%\",\"widget\":\"range\",\"label\":\"Яркость\",\"offset\":30,\"size\":1}]},{\"title\":\"Анимации\",\"help\":\"" \
-  "Заставка при включении и анимация выключения\",\"fields\":[{\"key\":\"intro_logo\",\"type\":\"bool\",\"defau" \
-  "lt\":true,\"section\":\"При включении\",\"label\":\"Логотип при включении\",\"help\":\"После логотипа играет" \
-  " случайная из отмеченных заставок. Без логотипа данные появляются сразу\",\"preview\":\"logo\",\"offse" \
-  "t\":31,\"size\":1},{\"key\":\"intro_clawd\",\"type\":\"bool\",\"default\":false,\"label\":\"Заставки Clawd\",\"hel" \
-  "p\":\"Играют заставки Clawd\",\"widget\":\"clawd\",\"depends\":{\"intro_logo\":true},\"offset\":32,\"size\":1}," \
-  "{\"key\":\"intro_wave\",\"type\":\"bool\",\"default\":true,\"label\":\"Волна\",\"help\":\"Волна с пузырями проход" \
-  "ит слева направо и открывает данные\",\"preview\":\"wave\",\"depends\":{\"intro_logo\":true,\"intro_clawd\"" \
-  ":false},\"subitem\":true,\"offset\":33,\"size\":1},{\"key\":\"intro_break\",\"type\":\"bool\",\"default\":true,\"" \
-  "label\":\"Разрушение\",\"help\":\"Логотип трескается и рассыпается на куски\",\"preview\":\"break\",\"depend" \
-  "s\":{\"intro_logo\":true,\"intro_clawd\":false},\"subitem\":true,\"offset\":34,\"size\":1},{\"key\":\"intro_ex" \
-  "plosion\",\"type\":\"bool\",\"default\":true,\"label\":\"Взрыв\",\"help\":\"Логотип разлетается облаком частиц" \
-  ", как TNT в Minecraft\",\"preview\":\"explosion\",\"depends\":{\"intro_logo\":true,\"intro_clawd\":false},\"" \
-  "subitem\":true,\"offset\":35,\"size\":1},{\"key\":\"poweroff_animation\",\"type\":\"bool\",\"default\":true,\"se" \
-  "ction\":\"При выключении\",\"label\":\"Анимация выключения\",\"help\":\"Экран сжимается в линию, затем в т" \
-  "очку и гаснет, как у старого телевизора\",\"preview\":\"poweroff\",\"offset\":36,\"size\":1}]},{\"title\":\"" \
-  "Кнопка\",\"help\":\"Сколько держать кнопку, чтобы включить и выключить дисплей\",\"fields\":[{\"key\":\"po" \
-  "wer_on_ms\",\"type\":\"u16\",\"default\":500,\"min\":100,\"max\":3000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удерж" \
-  "ание для включения\",\"offset\":37,\"size\":2},{\"key\":\"power_off_ms\",\"type\":\"u16\",\"default\":1000,\"min" \
-  "\":500,\"max\":5000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для выключения\",\"help\":\"Более коротко" \
-  "е нажатие переключает экран\",\"offset\":39,\"size\":2}]},{\"title\":\"Обновление по Bluetooth\",\"help\":\"" \
-  "Прошивка с телефона без кабеля\",\"fields\":[{\"key\":\"ble_update\",\"type\":\"bool\",\"default\":true,\"labe" \
-  "l\":\"Разрешить обновление прошивки по Bluetooth\",\"help\":\"Режим обновления включается, только если" \
-  " при включении держать кнопку около 4 секунд после того, как загорится экран, пока не заполнится" \
-  " полоса. Нужен заряд не ниже 30% или подключённый USB. В обычной работе прошить дисплей по Bluet" \
-  "ooth нельзя\",\"offset\":41,\"size\":1}]}]}"
+  "RIP\",\"label\":\"Пробег, км\"}],\"offset\":14,\"size\":1},{\"key\":\"screen4_type\",\"type\":\"u8\",\"default\":3," \
+  "\"label\":\"Экран 4\",\"options\":[{\"value\":0,\"id\":\"NONE\",\"label\":\"Нет\"},{\"value\":1,\"id\":\"MAIN\",\"label" \
+  "\":\"Два значения\"},{\"value\":2,\"id\":\"GRID\",\"label\":\"Четыре значения\"},{\"value\":3,\"id\":\"INFO\",\"labe" \
+  "l\":\"Связь и версии\"},{\"value\":4,\"id\":\"CLOCK\",\"label\":\"Часы\"}],\"offset\":15,\"size\":1},{\"key\":\"scre" \
+  "en4_v1\",\"type\":\"u8\",\"default\":2,\"label\":\"Экран 4, поле 1\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"la" \
+  "bel\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":" \
+  "\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TE" \
+  "MPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":16," \
+  "\"size\":1},{\"key\":\"screen4_v2\",\"type\":\"u8\",\"default\":3,\"label\":\"Экран 4, поле 2\",\"options\":[{\"val" \
+  "ue\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2," \
+  "\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В" \
+  "\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Проб" \
+  "ег, км\"}],\"offset\":17,\"size\":1},{\"key\":\"screen4_v3\",\"type\":\"u8\",\"default\":4,\"label\":\"Экран 4, по" \
+  "ле 3\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\"" \
+  ":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\"" \
+  ":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id" \
+  "\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":18,\"size\":1},{\"key\":\"screen4_v4\",\"type\":\"u8\",\"default\":" \
+  "5,\"label\":\"Экран 4, поле 4\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value" \
+  "\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3," \
+  "\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температур" \
+  "а, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":19,\"size\":1},{\"key\":\"screen5_type" \
+  "\",\"type\":\"u8\",\"default\":0,\"label\":\"Экран 5\",\"options\":[{\"value\":0,\"id\":\"NONE\",\"label\":\"Нет\"},{\"v" \
+  "alue\":1,\"id\":\"MAIN\",\"label\":\"Два значения\"},{\"value\":2,\"id\":\"GRID\",\"label\":\"Четыре значения\"},{\"" \
+  "value\":3,\"id\":\"INFO\",\"label\":\"Связь и версии\"},{\"value\":4,\"id\":\"CLOCK\",\"label\":\"Часы\"}],\"offset\"" \
+  ":20,\"size\":1},{\"key\":\"screen5_v1\",\"type\":\"u8\",\"default\":2,\"label\":\"Экран 5, поле 1\",\"options\":[{" \
+  "\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value" \
+  "\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колес" \
+  "а, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"" \
+  "Пробег, км\"}],\"offset\":21,\"size\":1},{\"key\":\"screen5_v2\",\"type\":\"u8\",\"default\":3,\"label\":\"Экран 5" \
+  ", поле 2\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"la" \
+  "bel\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"la" \
+  "bel\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5" \
+  ",\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":22,\"size\":1},{\"key\":\"screen5_v3\",\"type\":\"u8\",\"defau" \
+  "lt\":4,\"label\":\"Экран 5, поле 3\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\":\"Скорость, км/ч\"},{\"v" \
+  "alue\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Заряд колеса, %\"},{\"value" \
+  "\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPERATURE\",\"label\":\"Темпер" \
+  "атура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":23,\"size\":1},{\"key\":\"screen5_" \
+  "v4\",\"type\":\"u8\",\"default\":5,\"label\":\"Экран 5, поле 4\",\"options\":[{\"value\":0,\"id\":\"SPEED\",\"label\"" \
+  ":\"Скорость, км/ч\"},{\"value\":1,\"id\":\"PWM\",\"label\":\"ШИМ, %\"},{\"value\":2,\"id\":\"CHARGE\",\"label\":\"Зар" \
+  "яд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id\":\"TEMPER" \
+  "ATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"}],\"offset\":24,\"siz" \
+  "e\":1},{\"key\":\"wheel_voltage_x10\",\"type\":\"u16\",\"default\":1512,\"label\":\"Батарея колеса\",\"help\":\"По" \
+  " максимальному напряжению рассчитывается место под цифры напряжения на экранах\",\"options\":[{\"val" \
+  "ue\":840,\"id\":\"20S\",\"label\":\"84 В (20S)\"},{\"value\":1008,\"id\":\"24S\",\"label\":\"100,8 В (24S)\"},{\"val" \
+  "ue\":1260,\"id\":\"30S\",\"label\":\"126 В (30S)\"},{\"value\":1344,\"id\":\"32S\",\"label\":\"134,4 В (32S)\"},{\"v" \
+  "alue\":1512,\"id\":\"36S\",\"label\":\"151,2 В (36S)\"},{\"value\":1680,\"id\":\"40S\",\"label\":\"168 В (40S)\"},{" \
+  "\"value\":1764,\"id\":\"42S\",\"label\":\"176,4 В (42S)\"}],\"offset\":25,\"size\":2},{\"key\":\"timezone\",\"type\"" \
+  ":\"u8\",\"default\":60,\"label\":\"Часовой пояс\",\"help\":\"Для экрана с часами: время приходит из LoEUC, " \
+  "дисплей показывает его в этом поясе. На летнее время сам не переходит\",\"options\":[{\"value\":0,\"id" \
+  "\":\"UTC_M12\",\"label\":\"UTC-12\"},{\"value\":4,\"id\":\"UTC_M11\",\"label\":\"UTC-11\"},{\"value\":8,\"id\":\"UTC_M" \
+  "10\",\"label\":\"UTC-10\"},{\"value\":12,\"id\":\"UTC_M9\",\"label\":\"UTC-9\"},{\"value\":16,\"id\":\"UTC_M8\",\"labe" \
+  "l\":\"UTC-8\"},{\"value\":20,\"id\":\"UTC_M7\",\"label\":\"UTC-7\"},{\"value\":24,\"id\":\"UTC_M6\",\"label\":\"UTC-6\"" \
+  "},{\"value\":28,\"id\":\"UTC_M5\",\"label\":\"UTC-5\"},{\"value\":32,\"id\":\"UTC_M4\",\"label\":\"UTC-4\"},{\"value\"" \
+  ":36,\"id\":\"UTC_M3\",\"label\":\"UTC-3\"},{\"value\":40,\"id\":\"UTC_M2\",\"label\":\"UTC-2\"},{\"value\":44,\"id\":\"" \
+  "UTC_M1\",\"label\":\"UTC-1\"},{\"value\":48,\"id\":\"UTC_0\",\"label\":\"UTC\"},{\"value\":52,\"id\":\"UTC_P1\",\"labe" \
+  "l\":\"UTC+1\"},{\"value\":56,\"id\":\"UTC_P2\",\"label\":\"UTC+2, Калининград\"},{\"value\":60,\"id\":\"UTC_P3\",\"l" \
+  "abel\":\"UTC+3, Москва, Минск, Стамбул\"},{\"value\":64,\"id\":\"UTC_P4\",\"label\":\"UTC+4, Самара, Тбилиси" \
+  ", Ереван, Баку\"},{\"value\":68,\"id\":\"UTC_P5\",\"label\":\"UTC+5, Екатеринбург, Ташкент, Астана\"},{\"val" \
+  "ue\":72,\"id\":\"UTC_P6\",\"label\":\"UTC+6, Омск, Бишкек\"},{\"value\":76,\"id\":\"UTC_P7\",\"label\":\"UTC+7, Но" \
+  "восибирск, Красноярск\"},{\"value\":80,\"id\":\"UTC_P8\",\"label\":\"UTC+8, Иркутск, Пекин\"},{\"value\":84,\"" \
+  "id\":\"UTC_P9\",\"label\":\"UTC+9, Якутск, Токио, Сеул\"},{\"value\":88,\"id\":\"UTC_P10\",\"label\":\"UTC+10, В" \
+  "ладивосток\"},{\"value\":92,\"id\":\"UTC_P11\",\"label\":\"UTC+11, Магадан, Сахалин\"},{\"value\":96,\"id\":\"UT" \
+  "C_P12\",\"label\":\"UTC+12, Камчатка\"},{\"value\":100,\"id\":\"UTC_P13\",\"label\":\"UTC+13\"},{\"value\":104,\"i" \
+  "d\":\"UTC_P14\",\"label\":\"UTC+14\"}],\"offset\":27,\"size\":1}]},{\"title\":\"Предупреждение о ШИМ\",\"help\":\"" \
+  "Мигание экрана, когда ШИМ подходит к пределу\",\"fields\":[{\"key\":\"pwm_alarm\",\"type\":\"bool\",\"defaul" \
+  "t\":true,\"label\":\"Мигать экраном при превышении порога ШИМ\",\"help\":\"Чем выше ШИМ, тем чаще мигани" \
+  "е\",\"offset\":28,\"size\":1},{\"key\":\"pwm_alarm_source\",\"type\":\"u8\",\"default\":0,\"label\":\"Порог\",\"opti" \
+  "ons\":[{\"value\":0,\"id\":\"APP\",\"label\":\"Из настроек приложения LoEUC\"},{\"value\":1,\"id\":\"FIXED\",\"lab" \
+  "el\":\"Свой\"}],\"depends\":{\"pwm_alarm\":true},\"offset\":29,\"size\":1},{\"key\":\"pwm_alarm_threshold\",\"ty" \
+  "pe\":\"u8\",\"default\":80,\"min\":30,\"max\":99,\"unit\":\"%\",\"label\":\"Свой порог ШИМ\",\"depends\":{\"pwm_alar" \
+  "m\":true,\"pwm_alarm_source\":1},\"offset\":30,\"size\":1}]},{\"title\":\"Дисплей\",\"help\":\"Яркость экрана\"" \
+  ",\"fields\":[{\"key\":\"brightness\",\"type\":\"u8\",\"default\":100,\"min\":5,\"max\":100,\"step\":5,\"unit\":\"%\",\"" \
+  "widget\":\"range\",\"label\":\"Яркость\",\"offset\":31,\"size\":1}]},{\"title\":\"Анимации\",\"help\":\"Заставка п" \
+  "ри включении и анимация выключения\",\"fields\":[{\"key\":\"intro_logo\",\"type\":\"bool\",\"default\":true,\"" \
+  "section\":\"При включении\",\"label\":\"Логотип при включении\",\"help\":\"После логотипа играет случайная" \
+  " из отмеченных заставок. Без логотипа данные появляются сразу\",\"preview\":\"logo\",\"offset\":32,\"siz" \
+  "e\":1},{\"key\":\"intro_clawd\",\"type\":\"bool\",\"default\":false,\"label\":\"Заставки Clawd\",\"help\":\"Играют" \
+  " заставки Clawd\",\"widget\":\"clawd\",\"depends\":{\"intro_logo\":true},\"offset\":33,\"size\":1},{\"key\":\"in" \
+  "tro_wave\",\"type\":\"bool\",\"default\":true,\"label\":\"Волна\",\"help\":\"Волна с пузырями проходит слева н" \
+  "аправо и открывает данные\",\"preview\":\"wave\",\"depends\":{\"intro_logo\":true,\"intro_clawd\":false},\"s" \
+  "ubitem\":true,\"offset\":34,\"size\":1},{\"key\":\"intro_break\",\"type\":\"bool\",\"default\":true,\"label\":\"Ра" \
+  "зрушение\",\"help\":\"Логотип трескается и рассыпается на куски\",\"preview\":\"break\",\"depends\":{\"intro" \
+  "_logo\":true,\"intro_clawd\":false},\"subitem\":true,\"offset\":35,\"size\":1},{\"key\":\"intro_explosion\",\"" \
+  "type\":\"bool\",\"default\":true,\"label\":\"Взрыв\",\"help\":\"Логотип разлетается облаком частиц, как TNT " \
+  "в Minecraft\",\"preview\":\"explosion\",\"depends\":{\"intro_logo\":true,\"intro_clawd\":false},\"subitem\":t" \
+  "rue,\"offset\":36,\"size\":1},{\"key\":\"poweroff_animation\",\"type\":\"bool\",\"default\":true,\"section\":\"Пр" \
+  "и выключении\",\"label\":\"Анимация выключения\",\"help\":\"Экран сжимается в линию, затем в точку и гас" \
+  "нет, как у старого телевизора\",\"preview\":\"poweroff\",\"offset\":37,\"size\":1}]},{\"title\":\"Кнопка\",\"h" \
+  "elp\":\"Сколько держать кнопку, чтобы включить и выключить дисплей\",\"fields\":[{\"key\":\"power_on_ms\"" \
+  ",\"type\":\"u16\",\"default\":500,\"min\":100,\"max\":3000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для в" \
+  "ключения\",\"offset\":38,\"size\":2},{\"key\":\"power_off_ms\",\"type\":\"u16\",\"default\":1000,\"min\":500,\"max" \
+  "\":5000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для выключения\",\"help\":\"Более короткое нажатие " \
+  "переключает экран\",\"offset\":40,\"size\":2}]},{\"title\":\"Обновление по Bluetooth\",\"help\":\"Прошивка с" \
+  " телефона без кабеля\",\"fields\":[{\"key\":\"ble_update\",\"type\":\"bool\",\"default\":true,\"label\":\"Разреш" \
+  "ить обновление прошивки по Bluetooth\",\"help\":\"Режим обновления включается, только если при включ" \
+  "ении держать кнопку около 4 секунд после того, как загорится экран, пока не заполнится полоса. Н" \
+  "ужен заряд не ниже 30% или подключённый USB. В обычной работе прошить дисплей по Bluetooth нельз" \
+  "я\",\"offset\":42,\"size\":1}]}]}"

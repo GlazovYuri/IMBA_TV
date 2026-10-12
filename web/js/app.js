@@ -795,6 +795,9 @@ function screenPreviewOptions() {
     wheelVoltage: state.values?.wheel_voltage_x10 ?? 1512,
     firmware: tag.replace(/^v/, '') || '--',
     bootloader: '--',
+    // часы показывают, сколько сейчас будет на дисплее в выбранном поясе
+    time: Date.now(),
+    timezone: state.values?.timezone,
   };
 }
 

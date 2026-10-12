@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "shared.h"
+#include "../../IMBA_TV/config.h"
 
 using namespace emu;
 
@@ -624,8 +625,27 @@ void AdafruitBluefruit::configPrphBandwidth(uint8_t bw)
   board->mtu_max = bw == BANDWIDTH_MAX ? BLE_GATT_ATT_MTU_MAX : (bw == BANDWIDTH_HIGH ? 128 : BLE_GATT_ATT_MTU_DEFAULT);
 }
 
+// Настройки из сценария (cfg.КЛЮЧ=значение). Прошивка вызывает Bluefruit.begin() из softDeviceInit()
+// сразу после configLoad(), раньше всех, кто читает настройки: для неё подмена здесь выглядит
+// так же, как значения, которые сайт записал в образ
+static void applyConfigOverrides()
+{
+  static_assert(sizeof(fw_config_t) <= kCfgMax, "kCfgMax меньше fw_config_t");
+  fw_config_t& cfg = const_cast<fw_config_t&>(config());
+  uint8_t* p = (uint8_t*)&cfg;
+  bool any = false;
+  for(size_t i = 0; i < sizeof(fw_config_t); i++)
+  {
+    if(!board->cfg_set[i]) continue;
+    p[i] = board->cfg_val[i];
+    any = true;
+  }
+  if(any) configSanitize(cfg);
+}
+
 bool AdafruitBluefruit::begin(uint8_t, uint8_t)
 {
+  applyConfigOverrides();
   board->sd_enabled = 1;
   board->tx_power = 0;
   return true;
