@@ -968,6 +968,48 @@ static void httpThread(int listen_fd)
 
 static int script_failures = 0;
 
+// expect glass=FILE: экран совпадает с картинкой из FILE - 64 строки по 128 знаков,
+// '#' точка светится, '.' не светится, '?' не проверяется (например, заряд платы: он зависит от шума АЦП).
+// Возвращает текст ошибки или пустую строку; при расхождении кадр пишется рядом в FILE.actual
+static std::string glassCompare(const std::string& path)
+{
+  std::ifstream f(path);
+  if(!f) return "нет файла " + path;
+  std::vector<std::string> rows;
+  std::string line;
+  while(std::getline(f, line))
+  {
+    if(!line.empty() && line.back() == '\r') line.pop_back();
+    if(!line.empty()) rows.push_back(line);
+  }
+  if(rows.size() != 64) return path + ": нужно 64 строки, а не " + std::to_string(rows.size());
+  for(int y = 0; y < 64; y++)
+    if(rows[y].size() != 128 || rows[y].find_first_not_of("#.?") != std::string::npos)
+      return path + ": в строке " + std::to_string(y + 1) + " нужно 128 знаков из #, . и ?";
+
+  uint8_t glass[64][128];
+  renderGlass(glass);
+  int diff = 0, fx = 0, fy = 0;
+  for(int y = 0; y < 64; y++)
+    for(int x = 0; x < 128; x++)
+    {
+      char want = rows[y][x];
+      if(want == '?' || (want == '#') == (glass[y][x] != 0)) continue;
+      if(!diff++) { fx = x; fy = y; }
+    }
+  if(!diff) return "";
+
+  std::ofstream out(path + ".actual");
+  for(int y = 0; y < 64; y++)
+  {
+    for(int x = 0; x < 128; x++) out << (glass[y][x] ? '#' : '.');
+    out << '\n';
+  }
+  char b[160];
+  snprintf(b, sizeof(b), "отличаются %d точек, первая x=%d y=%d; кадр записан в %s.actual", diff, fx, fy, path.c_str());
+  return b;
+}
+
 static void scriptRun(const std::string& path)
 {
   std::ifstream f(path);
@@ -1000,9 +1042,20 @@ static void scriptRun(const std::string& path)
     }
     else if(cmd == "expect")
     {
-      // expect cpu=running|off|crashed, expect connected=0|1, expect display=on|off
+      // expect cpu=running|off|crashed, expect connected=0|1, expect display=on|off, expect glass=FILE
       size_t eq = rest.find('=');
       std::string k = rest.substr(0, eq), v = eq == std::string::npos ? "" : rest.substr(eq + 1);
+      if(k == "glass")
+      {
+        std::string err = glassCompare(v);
+        if(!err.empty())
+        {
+          script_failures++;
+          logf("строка %d: экран не совпал с %s: %s", ln, v.c_str(), err.c_str());
+        }
+        else logLine("[script] ok: " + rest);
+        continue;
+      }
       std::string actual;
       if(k == "cpu") actual = board->cpu == CPU_RUNNING ? "running" : (board->cpu == CPU_OFF ? "off" : "crashed");
       else if(k == "connected") actual = board->connected ? "1" : "0";
