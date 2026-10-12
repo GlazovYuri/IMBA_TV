@@ -43,6 +43,14 @@ export function writeScreens(slots, values, screens) {
   });
 }
 
+// Какие экраны можно добавить: те, что знают и сайт, и выбранная прошивка (варианты screenN_type в её настройках).
+// Старая прошивка заменила бы незнакомый тип экраном по умолчанию
+const ADDABLE = [SCREEN.MAIN, SCREEN.GRID, SCREEN.INFO, SCREEN.CLOCK];
+export function addableTypes(slots) {
+  const options = slots[0]?.type.options;
+  return options ? ADDABLE.filter((t) => options.some((o) => o.value === t)) : ADDABLE;
+}
+
 export function newScreen(type) {
   return { type, v: [...(SCREEN_TYPES[type]?.defaults ?? [0, 0, 0, 0])] };
 }
@@ -319,7 +327,7 @@ export function createScreenEditor({ slots, values, options, onChange, isBusy })
     }));
 
     const canAdd = all.length < max && !busy;
-    tiles.replaceChildren(...[SCREEN.MAIN, SCREEN.GRID, SCREEN.INFO].map((type) => {
+    tiles.replaceChildren(...addableTypes(slots).map((type) => {
       const tile = el('button', 'screen-tile');
       tile.type = 'button';
       tile.disabled = !canAdd;
