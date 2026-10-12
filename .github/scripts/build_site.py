@@ -11,13 +11,24 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 EXTENSIONS = ('zip', 'hex', 'uf2')
+# Файлов прошивок десятки, и один сбой сети на любом из них ронял всю сборку сайта
+GH_ATTEMPTS = 4
 
 
 def gh(*args):
-    return subprocess.run(['gh', *args], check=True, capture_output=True, text=True).stdout
+    for attempt in range(1, GH_ATTEMPTS + 1):
+        result = subprocess.run(['gh', *args], capture_output=True, text=True)
+        if result.returncode == 0:
+            return result.stdout
+        print(f'gh {" ".join(args[:3])}: попытка {attempt} из {GH_ATTEMPTS} не удалась: {result.stderr.strip()}',
+              file=sys.stderr, flush=True)
+        if attempt < GH_ATTEMPTS:
+            time.sleep(5 * attempt)
+    sys.exit(f'gh {" ".join(args)}: не удалось за {GH_ATTEMPTS} попытки')
 
 
 def main():
@@ -44,7 +55,7 @@ def main():
 
         target = os.path.join(out, 'firmware', tag)
         os.makedirs(target)
-        args = ['release', 'download', tag, '--repo', repo, '--dir', target]
+        args = ['release', 'download', tag, '--repo', repo, '--dir', target, '--clobber']
         for name in names.values():
             args += ['--pattern', name]
         gh(*args)
