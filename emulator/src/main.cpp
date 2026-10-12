@@ -257,6 +257,14 @@ struct Phone
   uint8_t frame = 0;
   uint64_t connect_at = 0;
   uint64_t next_tx = 0;
+  // снимок в ...2c07 раз в секунду, если у платы есть эта характеристика
+  bool snap = true;
+  uint16_t mtu = 517;     // сколько просит телефон, как Android; согласуется меньшее из его и платы
+  double clock_ppm = 0;   // часы телефона спешат (+) или отстают от виртуального времени
+  double clock_ms = (double)std::chrono::duration_cast<std::chrono::milliseconds>(
+                      std::chrono::system_clock::now().time_since_epoch()).count();
+  double trip_ms = 0;
+  uint64_t next_snap = 0;
   Field fields[7] = {
     {"speed", "скорость, км/ч", 25, true, 6},
     {"pwm", "ШИМ, %", 40, true, 8},
@@ -286,6 +294,7 @@ static BleCmd buildPacket()
 {
   BleCmd c{};
   c.type = BLE_WRITE;
+  c.chr = kCharTelemetry;
   c.len = 20;
   c.data[0] = 'L';
   c.data[1] = 'E';
@@ -299,6 +308,83 @@ static BleCmd buildPacket()
     c.data[f.offset + 1] = (uint16_t)v & 0xFF;
   }
   return c;
+}
+
+static void putBe(std::vector<uint8_t>& v, uint64_t x, int bytes)
+{
+  for(int i = bytes - 1; i >= 0; i--) v.push_back((uint8_t)(x >> (i * 8)));
+}
+
+static uint32_t crc32(const std::vector<uint8_t>& v)
+{
+  uint32_t crc = 0xFFFFFFFF;
+  for(uint8_t b : v)
+  {
+    crc ^= b;
+    for(int i = 0; i < 8; i++) crc = (crc >> 1) ^ (0xEDB88320 & (0 - (crc & 1)));
+  }
+  return ~crc;
+}
+
+// снимок LoEUC: 'L' 'E' 03, флаги, метка времени (мс), N метрик по 5 байт, при поездке блок на 22 байта
+static std::vector<uint8_t> buildSnapshot()
+{
+  static const struct { const char* key; uint8_t code; } metrics[] = {
+    {"speed", 1}, {"pwm", 2}, {"volt", 3}, {"charge", 12}, {"temp", 13}, {"trip", 24},
+  };
+  std::vector<uint8_t> p = {'L', 'E', 3, (uint8_t)(phone.ride ? 1 : 0)};
+  putBe(p, (uint64_t)phone.clock_ms, 8);
+  size_t n_pos = p.size();
+  p.push_back(0);
+  for(auto& m : metrics)
+  {
+    Field* f = phone.field(m.key);
+    if(!f->present) continue;
+    p.push_back(m.code);
+    putBe(p, (uint32_t)(int32_t)lround(f->value * 1000), 4);
+    p[n_pos]++;
+  }
+  if(phone.ride)
+  {
+    putBe(p, (uint32_t)phone.trip_ms, 4);
+    putBe(p, (uint32_t)lround(phone.field("trip")->value * 1000), 4);
+    putBe(p, (uint32_t)lround(phone.field("speed")->value * 1000), 4);
+    putBe(p, (uint32_t)lround(phone.field("pwm")->value * 1000), 4);
+    putBe(p, (uint32_t)lround(phone.field("charge")->value * 1000), 4);
+    putBe(p, 0, 2);
+  }
+  return p;
+}
+
+// кусками по MTU - 3: заголовок 'L' 'E' 01, флаги (бит 0 - последний), номер; у куска 0 ещё длина и CRC32
+static void sendSnapshot()
+{
+  std::vector<uint8_t> p = buildSnapshot();
+  uint32_t crc = crc32(p);
+  size_t chunk = std::min<size_t>(std::min<uint16_t>(phone.mtu, board->mtu_max.load()) - 3, kBleWriteMax);
+  size_t off = 0;
+  uint16_t num = 0;
+  do
+  {
+    std::vector<uint8_t> h = {'L', 'E', 1, 0};
+    putBe(h, num, 2);
+    if(num == 0)
+    {
+      putBe(h, p.size(), 4);
+      putBe(h, crc, 4);
+    }
+    size_t take = std::min(chunk - h.size(), p.size() - off);
+    if(off + take == p.size()) h[3] = 1;
+    BleCmd c{};
+    c.type = BLE_WRITE;
+    c.chr = kCharSnapshot;
+    c.len = h.size() + take;
+    memcpy(c.data, h.data(), h.size());
+    memcpy(c.data + h.size(), p.data() + off, take);
+    blePush(c);
+    off += take;
+    num++;
+  } while(off < p.size());
 }
 
 static void rideStep(double dt)
@@ -329,6 +415,8 @@ static void phoneThread()
     double dt = (now - prev) / 1e6;
     prev = now;
     if(phone.ride) rideStep(dt);
+    phone.clock_ms += dt * 1000 * (1 + phone.clock_ppm * 1e-6);
+    if(phone.ride) phone.trip_ms += dt * 1000;
 
     bool running = board->cpu == CPU_RUNNING;
     if(running && phone.enabled && board->adv && !board->connected)
@@ -349,6 +437,12 @@ static void phoneThread()
     {
       blePush(buildPacket());
       phone.next_tx = now + phone.interval_ms * 1000ull;
+    }
+
+    if(running && board->connected && board->snap_ready && phone.snap && now >= phone.next_snap)
+    {
+      sendSnapshot();
+      phone.next_snap = now + 1000000;
     }
   }
 }
@@ -391,6 +485,8 @@ static void boot(uint32_t reason)
   board->adv = 0;
   board->connected = 0;
   board->char_ready = 0;
+  board->snap_ready = 0;
+  board->mtu_max = kMtuDefault;
   board->restart_on_disc = 0;
   board->ble_q.clear();
   board->reset_reason = reason;
@@ -601,6 +697,24 @@ static bool parseBool(const std::string& v)
   return v == "1" || v == "on" || v == "true" || v == "yes";
 }
 
+// запись в характеристику из hex; вызывается под env_mtx
+static std::string writeHex(const std::string& k, const std::string& v, uint16_t chr)
+{
+  BleCmd c{};
+  c.type = BLE_WRITE;
+  c.chr = chr;
+  std::string hex;
+  for(char ch : v)
+    if(isxdigit((unsigned char)ch)) hex += ch;
+  if(hex.size() % 2 || hex.size() / 2 > sizeof(c.data))
+    return k + ": нужно чётное число hex-цифр, до " + std::to_string(sizeof(c.data)) + " байт";
+  c.len = hex.size() / 2;
+  for(size_t i = 0; i < c.len; i++) c.data[i] = (uint8_t)strtoul(hex.substr(i * 2, 2).c_str(), nullptr, 16);
+  if(!board->connected) return k + ": телефон не подключён";
+  blePush(c);
+  return "";
+}
+
 // возвращает текст ошибки или пустую строку
 static std::string applyCmd(const std::string& k, const std::string& v)
 {
@@ -641,19 +755,12 @@ static std::string applyCmd(const std::string& k, const std::string& v)
     else if(k == "tx") phone.tx = parseBool(v);
     else if(k == "ride") phone.ride = parseBool(v);
     else if(k == "interval") phone.interval_ms = (uint32_t)constrainD(atof(v.c_str()), 5, 10000);
-    else if(k == "packet")
-    {
-      BleCmd c{};
-      c.type = BLE_WRITE;
-      std::string hex;
-      for(char ch : v)
-        if(isxdigit((unsigned char)ch)) hex += ch;
-      if(hex.size() % 2 || hex.size() / 2 > sizeof(c.data)) return "packet: нужно чётное число hex-цифр, до 64 байт";
-      c.len = hex.size() / 2;
-      for(size_t i = 0; i < c.len; i++) c.data[i] = (uint8_t)strtoul(hex.substr(i * 2, 2).c_str(), nullptr, 16);
-      if(!board->connected) return "packet: телефон не подключён";
-      blePush(c);
-    }
+    else if(k == "packet") return writeHex(k, v, kCharTelemetry);
+    else if(k == "chunk") return writeHex(k, v, kCharSnapshot); // сырой кусок снимка
+    else if(k == "snap") phone.snap = parseBool(v);
+    else if(k == "mtu") phone.mtu = (uint16_t)constrainD(atof(v.c_str()), kMtuDefault, 517);
+    else if(k == "clockppm") phone.clock_ppm = constrainD(atof(v.c_str()), -100000, 100000);
+    else if(k == "snapts") phone.clock_ms = atof(v.c_str());
     else if(Field* f = phone.field(k))
     {
       if(v == "-" || v == "none") f->present = false;
@@ -763,8 +870,10 @@ static std::string stateJson()
 
   {
     std::lock_guard<std::mutex> lk(env_mtx);
-    snprintf(b, sizeof(b), "\"phone\":{\"enabled\":%d,\"tx\":%d,\"ride\":%d,\"interval\":%u,\"frame\":%u,\"fields\":[",
-             phone.enabled, phone.tx, phone.ride, phone.interval_ms, phone.frame);
+    snprintf(b, sizeof(b),
+             "\"phone\":{\"enabled\":%d,\"tx\":%d,\"ride\":%d,\"interval\":%u,\"frame\":%u,\"snap\":%d,\"mtu\":%u,"
+             "\"clockppm\":%.1f,\"fields\":[",
+             phone.enabled, phone.tx, phone.ride, phone.interval_ms, phone.frame, phone.snap, phone.mtu, phone.clock_ppm);
     s += b;
     for(int i = 0; i < 7; i++)
     {
@@ -792,13 +901,14 @@ static std::string stateJson()
            "\"adc\":{\"ref_mv\":%u,\"bits\":%u,\"last\":%u,\"reads\":%u},"
            "\"i2c\":{\"begun\":%d,\"clock\":%u,\"txn\":%u,\"bytes\":%u,\"nack\":%u},"
            "\"ble\":{\"adv\":%d,\"conn\":%d,\"char\":%d,\"restart\":%d,\"txp\":%d,\"ci_min\":%u,\"ci_max\":%u,"
-           "\"rx\":%u,\"rejected\":%u,\"conns\":%u},",
+           "\"rx\":%u,\"rejected\":%u,\"conns\":%u,\"snap\":%d,\"mtu_max\":%u,\"snap_rx\":%u},",
            (int)board->sd_enabled, (int)board->usbdetect_en, pinLevel(kPwrEnPin) == 1, pinLevel(kLedPin) == 1,
            ref_mv[board->adc_ref % 6], board->adc_bits.load(), board->adc_last.load(), board->adc_reads.load(),
            (int)board->wire_begun, board->i2c_clock.load(), board->i2c_txn.load(), board->i2c_bytes.load(),
            board->i2c_nack.load(), (int)board->adv, (int)board->connected, (int)board->char_ready,
            (int)board->restart_on_disc, (int)board->tx_power, board->ci_min_ms.load(), board->ci_max_ms.load(),
-           board->ble_rx.load(), board->ble_rejected.load(), board->ble_conn_count.load());
+           board->ble_rx.load(), board->ble_rejected.load(), board->ble_conn_count.load(), (int)board->snap_ready,
+           board->mtu_max.load(), board->snap_rx.load());
   s += b;
 
   const Sh1106& o = board->oled;

@@ -1,6 +1,6 @@
 #pragma once
 // Bluefruit (Adafruit nRF52) поверх модели SoftDevice эмулятора.
-// Поддерживается одна записываемая характеристика - больше прошивке не нужно.
+// Записываемые характеристики телефон находит по двум младшим байтам UUID (shared.h: kChar*).
 #include <Arduino.h>
 #include <nrf_soc.h>
 
@@ -10,6 +10,18 @@
 #define CHR_PROPS_NOTIFY 0x10
 
 #define BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE 0x06
+
+#define BLE_GATT_ATT_MTU_DEFAULT 23
+#define BLE_GATT_ATT_MTU_MAX 247
+
+enum
+{
+  BANDWIDTH_AUTO = 0,
+  BANDWIDTH_LOW,
+  BANDWIDTH_NORMAL,
+  BANDWIDTH_HIGH,
+  BANDWIDTH_MAX,
+};
 
 enum SecureMode_t
 {
@@ -112,6 +124,7 @@ public:
 class AdafruitBluefruit
 {
 public:
+  void configPrphBandwidth(uint8_t bw);
   bool begin(uint8_t prph_count = 1, uint8_t central_count = 0);
   void setTxPower(int8_t power);
   void setName(const char* name) { name_ = name; }

@@ -6,6 +6,7 @@
 #include "screen_main.h"
 #include "screen_grid.h"
 #include "screen_info.h"
+#include "screen_snapshot.h"
 #include "euc_values.h"
 
 static const uint32_t blink_period_low = 1000; //ms
@@ -23,8 +24,11 @@ struct screen_t
   uint8_t v[4];
 };
 
+// отладочный экран снимка LoEUC: всегда последний, в настройках его нет
+static const uint8_t screen_snapshot = 0xFF;
+
 static const uint8_t display_modes = 5;
-static screen_t modes[display_modes];
+static screen_t modes[display_modes + 1];
 static uint8_t modes_cnt = 0;
 static uint8_t display_mode = 0;
 
@@ -72,6 +76,7 @@ void displayInit()
     modes[modes_cnt++] = s;
   }
   if(modes_cnt == 0) modes[modes_cnt++] = { SCREEN_MAIN, { EUC_VALUE_CHARGE, EUC_VALUE_SPEED, EUC_VALUE_PWM, EUC_VALUE_TRIP } };
+  modes[modes_cnt++] = { screen_snapshot, {} };
   display_mode = 0;
 
   oled.init();
@@ -139,8 +144,10 @@ void displayRenderIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
   oled.clear();
 
   const screen_t& screen = modes[display_mode];
-  // версии полезны и без телефона, поэтому экран связи и версий показывается всегда
+  // версии полезны и без телефона, поэтому экран связи и версий показывается всегда.
+  // Снимок тоже: после разрыва на нём остаётся то, что успело прийти
   if(screen.type == SCREEN_INFO) screenInfoDraw(data);
+  else if(screen.type == screen_snapshot) screenSnapshotDraw();
   else if(!data.is_connected) screenNoLinkDraw(dev_charge, is_charging);
   else if(screen.type == SCREEN_GRID) screenGridDraw(data, screen.v);
   else screenMainDraw(dev_charge, is_charging, data, screen.v[0], screen.v[1], screen.v[2]);

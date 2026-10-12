@@ -34,7 +34,7 @@ HARNESS = os.path.join(ROOT, 'tools', 'previews')
 OUT = os.path.join(ROOT, 'web', 'previews')
 FONT_JS = os.path.join(ROOT, 'web', 'js', 'oled-font.js')
 SCREENS_JSON = os.path.join(ROOT, 'web', 'test', 'fixtures', 'screens.json')
-SOURCES = ['animations', 'display', 'screen_main', 'screen_grid', 'screen_info', 'screen_text', 'euc_values', 'config', 'logo', 'qr']
+SOURCES = ['animations', 'display', 'screen_main', 'screen_grid', 'screen_info', 'screen_snapshot', 'screen_text', 'euc_values', 'config', 'logo', 'qr']
 
 W, H = 128, 64
 FRAME_BYTES = W * H // 8
