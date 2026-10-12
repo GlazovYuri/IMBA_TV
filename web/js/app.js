@@ -2,7 +2,7 @@ import { loadFirmware, FirmwareError, withImageCrc, makeUf2 } from './firmware.j
 import { SerialDfu, DfuError, touch1200, activateWaitTime } from './dfu.js';
 import { BleDfu, BleDfuError, requestDfuDevice } from './ble-dfu.js';
 import {
-  findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, hasOwnSettings, initialValues,
+  findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, hasOwnSettings, initialValues, savedValues,
 } from './config.js';
 import { serial, serialApi, isAndroid } from './serial.js';
 import { createScreenEditor, screenSlots, isScreenField, changedScreens, describeScreens } from './screen-editor.js';
@@ -439,7 +439,7 @@ function loadSaved() {
 
 function saveValues() {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...loadSaved(), ...state.values }));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(savedValues(state.fw.config, loadSaved(), state.values)));
   } catch {
     // без localStorage настройки просто не запомнятся
   }

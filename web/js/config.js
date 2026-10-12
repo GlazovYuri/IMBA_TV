@@ -112,6 +112,18 @@ export function initialValues(cfg, bin, saved) {
   return hasOwnSettings(cfg, base) ? base : mergeValues(cfg, base, saved);
 }
 
+// Что запомнить в браузере: значения этой прошивки, отличные от её умолчаний. Тогда нетронутая
+// настройка получит новое значение по умолчанию из новой версии. Настройки других версий остаются как были
+export function savedValues(cfg, saved, values) {
+  const out = { ...saved };
+  for (const f of cfg.fields) {
+    if (!(f.key in values)) continue;
+    if (values[f.key] === f.default) delete out[f.key];
+    else out[f.key] = values[f.key];
+  }
+  return out;
+}
+
 // Значения, сохранённые раньше, поверх значений из прошивки — если они подходят этой версии
 export function mergeValues(cfg, base, saved) {
   const values = { ...base };
