@@ -100,6 +100,18 @@ export function applyValues(bin, cfg, values) {
   return out;
 }
 
+// В образ уже записаны свои настройки, а не значения по умолчанию (например, это «UF2 с настройками»)
+export function hasOwnSettings(cfg, values) {
+  return cfg.fields.some((f) => values[f.key] !== f.default);
+}
+
+// Значения для формы: свои настройки из файла важнее запомненных в браузере,
+// а прошивку со значениями по умолчанию (релиз, сборка из Arduino IDE) настраивают запомненные
+export function initialValues(cfg, bin, saved) {
+  const base = readValues(bin, cfg);
+  return hasOwnSettings(cfg, base) ? base : mergeValues(cfg, base, saved);
+}
+
 // Значения, сохранённые раньше, поверх значений из прошивки — если они подходят этой версии
 export function mergeValues(cfg, base, saved) {
   const values = { ...base };

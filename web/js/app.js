@@ -1,7 +1,9 @@
 import { loadFirmware, FirmwareError, withImageCrc, makeUf2 } from './firmware.js';
 import { SerialDfu, DfuError, touch1200, activateWaitTime } from './dfu.js';
 import { BleDfu, BleDfuError, requestDfuDevice } from './ble-dfu.js';
-import { findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues } from './config.js';
+import {
+  findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, hasOwnSettings, initialValues,
+} from './config.js';
 import { serial, serialApi, isAndroid } from './serial.js';
 import { createScreenEditor, screenSlots, isScreenField, changedScreens, describeScreens } from './screen-editor.js';
 
@@ -312,7 +314,8 @@ function select(selection) {
       (fw) => {
         if (token !== state.token) return;
         state.fw = fw;
-        showCheck(`Файл проверен: ${formatSize(fw.bin.length)}`, 'ok');
+        const own = fw.config && hasOwnSettings(fw.config, readValues(fw.bin, fw.config));
+        showCheck(`Файл проверен: ${formatSize(fw.bin.length)}${own ? '. Настройки взяты из файла' : ''}`, 'ok');
         renderConfig();
         renderDownloads();
       },
@@ -463,7 +466,7 @@ function renderConfig(values) {
     updateButtons();
     return;
   }
-  state.values = values ?? mergeValues(cfg, readValues(state.fw.bin, cfg), loadSaved());
+  state.values = values ?? initialValues(cfg, state.fw.bin, loadSaved());
 
   // каждая группа — отдельное сворачиваемое меню, в заголовке видно, менялись ли настройки
   for (const group of cfg.schema.groups) {
@@ -768,7 +771,7 @@ function buildImage(fw) {
   if (state.invalid.size) throw new FirmwareError('Исправьте ошибки в настройках');
   const values = state.fw === fw && state.values
     ? state.values
-    : mergeValues(fw.config, readValues(fw.bin, fw.config), loadSaved());
+    : initialValues(fw.config, fw.bin, loadSaved());
   const bin = applyValues(fw.bin, fw.config, values);
   return { bin, dat: withImageCrc(fw.dat, bin), values };
 }

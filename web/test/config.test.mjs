@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues } from '../js/config.js';
+import {
+  findConfig, readValues, defaultValues, checkValue, isVisible, applyValues, mergeValues,
+  hasOwnSettings, initialValues,
+} from '../js/config.js';
 import { readZip, loadFirmware, makeUf2, withImageCrc, crc16, FirmwareError } from '../js/firmware.js';
 import { schema, fields, defaults, makeBlock, withBlock } from './config-block.mjs';
 
@@ -103,6 +106,23 @@ test('сохранённые настройки применяются, если
   assert.equal(merged.pwm_alarm_source, 0);
   assert.equal(merged.intro_wave, false);
   assert.ok(!('unknown' in merged));
+});
+
+test('настройки, записанные в файл, важнее сохранённых в браузере', () => {
+  const bin = withBlock(appBin);
+  const cfg = findConfig(bin);
+  const saved = { brightness: 90, power_off_ms: 1000 };
+
+  // в блоке значения по умолчанию (релиз, сборка из Arduino IDE): берутся сохранённые в браузере
+  assert.equal(hasOwnSettings(cfg, readValues(bin, cfg)), false);
+  assert.equal(initialValues(cfg, bin, saved).brightness, 90);
+
+  // «UF2 с настройками»: в блоке свои значения, они и показываются
+  const own = applyValues(bin, cfg, { ...defaultValues(cfg), brightness: 40, power_off_ms: 3000 });
+  assert.equal(hasOwnSettings(cfg, readValues(own, cfg)), true);
+  const values = initialValues(cfg, own, saved);
+  assert.equal(values.brightness, 40);
+  assert.equal(values.power_off_ms, 3000);
 });
 
 test('повреждённый блок настроек', () => {
