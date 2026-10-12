@@ -248,7 +248,9 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
 });
 
-const ranges = { speed: [0, 120, 0.1], pwm: [0, 100, 1], volt: [0, 151.2, 0.1], charge: [0, 100, 1], temp: [-20, 100, 0.1], trip: [0, 6553, 0.1], limit: [0, 100, 1] };
+// скорость и ШИМ со знаком, как в протоколе LoEUC: назад и при торможении они отрицательные;
+// напряжение до 176.4 В - самой высоковольтной батареи из настроек прошивки (42S)
+const ranges = { speed: [-30, 120, 0.1], pwm: [-100, 100, 1], volt: [0, 176.4, 0.1], charge: [0, 100, 1], temp: [-20, 100, 0.1], trip: [0, 6553, 0.1], limit: [0, 100, 1] };
 function buildFields(fields) {
   const box = $('fields'); box.innerHTML = '';
   for (const f of fields) {
