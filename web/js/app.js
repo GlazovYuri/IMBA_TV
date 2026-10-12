@@ -817,7 +817,8 @@ function setBusy(busy) {
   state.busy = busy;
   document.querySelectorAll('input[name="firmware"], #file-pick, #show-all, .catalog-row, #config-form input, #config-form select, #config-reset, [role="tab"]')
     .forEach((el) => { el.disabled = busy; });
-  if (!busy) updateVisibility();
+  // подпункты и Clawd (он кнопка, а не поле) гасит updateVisibility: во время прошивки все, после - по условиям
+  updateVisibility();
   state.screenEditor?.refresh();
   updateButtons();
 }
