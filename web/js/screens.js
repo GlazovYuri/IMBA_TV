@@ -15,7 +15,7 @@ export const VALUE_NAMES = {
   [VALUE.PWM]: 'ШИМ',
   [VALUE.CHARGE]: 'Заряд колеса',
   [VALUE.VOLTAGE]: 'Напряжение колеса',
-  [VALUE.TEMPERATURE]: 'Температура',
+  [VALUE.TEMPERATURE]: 'Температура контроллера',
   [VALUE.TRIP]: 'Пробег',
   [VALUE.CLOCK]: 'Часы',
 };

@@ -49,10 +49,10 @@ test('предпросмотр рисуется на тех же данных, �
 // где прошивка ещё без слотов, поэтому редактор проверяется на этом описании, а с config.json оно сверяется,
 // когда слоты в нём есть
 const SLOT_DEFAULTS = [
-  [SCREEN.MAIN, VALUE.CHARGE, VALUE.SPEED, VALUE.PWM, VALUE.TRIP],
-  [SCREEN.MAIN, VALUE.VOLTAGE, VALUE.SPEED, VALUE.PWM, VALUE.TRIP],
+  [SCREEN.MAIN, VALUE.CLOCK, VALUE.SPEED, VALUE.PWM, VALUE.TRIP],
   [SCREEN.GRID, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
-  [SCREEN.INFO, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
+  [SCREEN.NONE, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
+  [SCREEN.NONE, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
   [SCREEN.NONE, VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP],
 ];
 const fields = SLOT_DEFAULTS.flatMap(([type, ...v], i) => [
@@ -78,15 +78,14 @@ test('номера типов и значений как в config.json', { skip
   }
   assert.ok(!byKey.screen6_type, 'экранов не больше пяти');
 
-  // по умолчанию экраны как до настройки: два значения с зарядом, с напряжением, сетка, связь и версии
+  // по умолчанию два экрана: два значения с часами сверху и сетка
   const screens = [1, 2, 3, 4, 5].map((n) => ({
     type: byKey[`screen${n}_type`].default,
     v: [1, 2, 3, 4].map((k) => byKey[`screen${n}_v${k}`].default),
   }));
-  assert.deepEqual(screens.map((s) => s.type), [SCREEN.MAIN, SCREEN.MAIN, SCREEN.GRID, SCREEN.INFO, SCREEN.NONE]);
-  assert.deepEqual(screens[0].v.slice(0, 3), [VALUE.CHARGE, VALUE.SPEED, VALUE.PWM]);
-  assert.deepEqual(screens[1].v.slice(0, 3), [VALUE.VOLTAGE, VALUE.SPEED, VALUE.PWM]);
-  assert.deepEqual(screens[2].v, [VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP]);
+  assert.deepEqual(screens.map((s) => s.type), [SCREEN.MAIN, SCREEN.GRID, SCREEN.NONE, SCREEN.NONE, SCREEN.NONE]);
+  assert.deepEqual(screens[0].v.slice(0, 3), [VALUE.CLOCK, VALUE.SPEED, VALUE.PWM]);
+  assert.deepEqual(screens[1].v, [VALUE.CHARGE, VALUE.VOLTAGE, VALUE.TEMPERATURE, VALUE.TRIP]);
 });
 
 test('у настраиваемых мест варианты, которые прошивка не заменит', () => {
@@ -115,33 +114,35 @@ const defaults = () => Object.fromEntries(fields.map((f) => [f.key, f.default]))
 test('экраны читаются по порядку, пустые слоты пропускаются', () => {
   assert.equal(slots.length, 5);
   const values = defaults();
-  assert.deepEqual(readScreens(slots, values).map((s) => s.type), [SCREEN.MAIN, SCREEN.MAIN, SCREEN.GRID, SCREEN.INFO]);
-  values.screen2_type = SCREEN.NONE;
-  assert.deepEqual(readScreens(slots, values).map((s) => s.type), [SCREEN.MAIN, SCREEN.GRID, SCREEN.INFO]);
+  assert.deepEqual(readScreens(slots, values).map((s) => s.type), [SCREEN.MAIN, SCREEN.GRID]);
+  values.screen1_type = SCREEN.NONE;
+  values.screen3_type = SCREEN.INFO;
+  assert.deepEqual(readScreens(slots, values).map((s) => s.type), [SCREEN.GRID, SCREEN.INFO]);
   assert.equal(changedScreens(slots, defaults()), 0);
 });
 
 test('добавление, перестановка и удаление записываются в слоты подряд', () => {
   const values = defaults();
   let screens = readScreens(slots, values);
-  screens = [...screens, newScreen(SCREEN.GRID)];
+  screens = [...screens, newScreen(SCREEN.INFO), newScreen(SCREEN.CLOCK), newScreen(SCREEN.GRID)];
   writeScreens(slots, values, screens);
   assert.equal(values.screen5_type, SCREEN.GRID);
   assert.deepEqual([1, 2, 3, 4].map((k) => values[`screen5_v${k}`]), SCREEN_TYPES[SCREEN.GRID].defaults);
 
   // сведения о связи - первым экраном
-  screens = moveScreen(readScreens(slots, values), 3, 0);
+  screens = moveScreen(readScreens(slots, values), 2, 0);
   writeScreens(slots, values, screens);
-  assert.deepEqual(readScreens(slots, values).map((s) => s.type), [SCREEN.INFO, SCREEN.MAIN, SCREEN.MAIN, SCREEN.GRID, SCREEN.GRID]);
+  assert.deepEqual(readScreens(slots, values).map((s) => s.type), [SCREEN.INFO, SCREEN.MAIN, SCREEN.GRID, SCREEN.CLOCK, SCREEN.GRID]);
 
   // удаляем два экрана: хвост освобождается и получает значения по умолчанию
-  screens = readScreens(slots, values).filter((_, i) => i !== 1 && i !== 2);
+  screens = readScreens(slots, values).filter((_, i) => i !== 1 && i !== 3);
   writeScreens(slots, values, screens);
   assert.deepEqual(readScreens(slots, values).map((s) => s.type), [SCREEN.INFO, SCREEN.GRID, SCREEN.GRID]);
   assert.equal(values.screen4_type, SCREEN.NONE);
   assert.equal(values.screen5_type, SCREEN.NONE);
   for (const f of [...slots[4].v, ...slots[3].v]) assert.equal(values[f.key], f.default);
-  assert.ok(changedScreens(slots, values) >= 3);
+  // первое место: связь вместо двух значений, третье: сетка вместо пустого
+  assert.equal(changedScreens(slots, values), 2);
   assert.match(describeScreens(slots, values), /^1\) Связь и версии: .*2\) Четыре значения: заряд колеса, напряжение колеса/);
 });
 

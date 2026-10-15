@@ -140,6 +140,7 @@ static euc_data_t sampleData()
 }
 
 static const uint8_t dev_charge = 82;
+static const uint64_t preview_unix_ms = 1792070345000ULL;  // чт 15.10.2026 13:19:05 UTC, в UTC+3 16:19
 static const uint32_t hold_iface = 1600;  // интерфейс после перехода, мс
 
 // подготовка экрана в запись не попадает: гифка начинается с первого кадра сценария
@@ -361,7 +362,15 @@ int main(int argc, char** argv)
   uint32_t seed = argc > 2 ? strtoul(argv[2], nullptr, 0) : 0x5EED1234u;
 
   configLoad();
+
+  // кадры экранов для теста сайта первыми: в части из них снимков со временем ещё не было
+  saveScreens((out + "/screens.bin").c_str());
+
+  // заставки с настройками по умолчанию: на первом экране сверху часы, время в превью 16:19
+  fw_config_t& cfg = configMut();
+  cfg = FW_CONFIG_DEFAULTS;
   displayInit();
+  feedSnapshot(preview_unix_ms);
   euc_data_t d = sampleData();
 
   // логотип секунду, затем сразу данные
@@ -391,13 +400,9 @@ int main(int argc, char** argv)
   delay(900);
   save((out + "/poweroff.bin").c_str());
 
-  saveScreens((out + "/screens.bin").c_str());
-
   // зарядка: снимок раз в секунду, экран зарядки открывается сам. Оформление при открытии случайное,
   // здесь все по очереди, каждое со своим появлением
   const uint32_t charge_hold[charge_styles] = {4200, 5000, 4400};
-  fw_config_t& cfg = configMut();
-  cfg = FW_CONFIG_DEFAULTS;
   begin();
   for(uint8_t style = 0; style < charge_styles; style++)
   {
