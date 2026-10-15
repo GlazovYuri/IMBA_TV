@@ -34,7 +34,7 @@ HARNESS = os.path.join(ROOT, 'tools', 'previews')
 OUT = os.path.join(ROOT, 'web', 'previews')
 FONT_JS = os.path.join(ROOT, 'web', 'js', 'oled-font.js')
 SCREENS_JSON = os.path.join(ROOT, 'web', 'test', 'fixtures', 'screens.json')
-SOURCES = ['animations', 'display', 'screen_main', 'screen_grid', 'screen_info', 'screen_clock', 'snapshot', 'screen_text', 'euc_values', 'config', 'logo', 'qr']
+SOURCES = ['animations', 'display', 'screen_main', 'screen_grid', 'screen_info', 'screen_clock', 'screen_charge', 'snapshot', 'screen_text', 'euc_values', 'config', 'logo', 'qr']
 
 W, H = 128, 64
 FRAME_BYTES = W * H // 8
@@ -44,7 +44,8 @@ SEED = 0x5EED1234
 
 # кадр для PNG: момент от начала записи, мс (у заставок первая секунда - логотип)
 POSTER_MS = {'logo': 500, 'wave': 1500, 'break': 1650, 'explosion': 1500,
-             'clawd_type': 3000, 'clawd_laptop': 3050, 'clawd_pixels': 2900, 'poweroff': 1330}
+             'clawd_type': 3000, 'clawd_laptop': 3050, 'clawd_pixels': 2900, 'poweroff': 1330,
+             'charging': 3000}
 
 
 def find_gyveroled():

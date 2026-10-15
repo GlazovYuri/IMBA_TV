@@ -35,6 +35,7 @@ struct __attribute__((packed)) fw_config_t
   uint8_t screen5_v4;  // Экран 5, поле 4
   uint16_t wheel_voltage_x10;  // Батарея колеса
   uint8_t timezone;  // Часовой пояс
+  uint8_t charge_screen;  // Экран зарядки колеса
   uint8_t pwm_alarm;  // Мигать экраном при превышении порога ШИМ
   uint8_t pwm_alarm_source;  // Порог
   uint8_t pwm_alarm_threshold;  // Свой порог ШИМ
@@ -50,9 +51,9 @@ struct __attribute__((packed)) fw_config_t
   uint8_t ble_update;  // Разрешить обновление прошивки по Bluetooth
 };
 
-static_assert(sizeof(fw_config_t) == 43, "config.json и fw_config_t разошлись");
+static_assert(sizeof(fw_config_t) == 44, "config.json и fw_config_t разошлись");
 
-#define FW_CONFIG_DEFAULTS { 1, 2, 0, 1, 5, 1, 3, 0, 1, 5, 2, 2, 3, 4, 5, 3, 2, 3, 4, 5, 0, 2, 3, 4, 5, 1512, 60, 1, 0, 80, 100, 1, 0, 1, 1, 1, 1, 500, 1000, 1 }
+#define FW_CONFIG_DEFAULTS { 1, 2, 0, 1, 5, 1, 3, 0, 1, 5, 2, 2, 3, 4, 5, 3, 2, 3, 4, 5, 0, 2, 3, 4, 5, 1512, 60, 1, 1, 0, 80, 100, 1, 0, 1, 1, 1, 1, 500, 1000, 1 }
 
 enum
 {
@@ -289,6 +290,7 @@ static inline void configSanitize(fw_config_t& c)
   switch(c.screen5_v4) { case 0: case 1: case 2: case 3: case 4: case 5: case 6: break; default: c.screen5_v4 = 5; }
   switch(c.wheel_voltage_x10) { case 840: case 1008: case 1260: case 1344: case 1512: case 1680: case 1764: break; default: c.wheel_voltage_x10 = 1512; }
   switch(c.timezone) { case 0: case 4: case 8: case 12: case 16: case 20: case 24: case 28: case 32: case 36: case 40: case 44: case 48: case 52: case 56: case 60: case 64: case 68: case 72: case 76: case 80: case 84: case 88: case 92: case 96: case 100: case 104: break; default: c.timezone = 60; }
+  if(c.charge_screen > 1) c.charge_screen = 1;
   if(c.pwm_alarm > 1) c.pwm_alarm = 1;
   switch(c.pwm_alarm_source) { case 0: case 1: break; default: c.pwm_alarm_source = 0; }
   if(c.pwm_alarm_threshold < 30 || c.pwm_alarm_threshold > 99) c.pwm_alarm_threshold = 80;
@@ -442,37 +444,42 @@ static inline void configSanitize(fw_config_t& c)
   "л\"},{\"value\":88,\"id\":\"UTC_P10\",\"label\":\"UTC+10, Владивосток\"},{\"value\":92,\"id\":\"UTC_P11\",\"label\"" \
   ":\"UTC+11, Магадан, Сахалин\"},{\"value\":96,\"id\":\"UTC_P12\",\"label\":\"UTC+12, Камчатка\"},{\"value\":100" \
   ",\"id\":\"UTC_P13\",\"label\":\"UTC+13\"},{\"value\":104,\"id\":\"UTC_P14\",\"label\":\"UTC+14\"}],\"offset\":27,\"si" \
-  "ze\":1}]},{\"title\":\"Предупреждение о ШИМ\",\"help\":\"Мигание экрана, когда ШИМ подходит к пределу\",\"" \
-  "fields\":[{\"key\":\"pwm_alarm\",\"type\":\"bool\",\"default\":true,\"label\":\"Мигать экраном при превышении " \
-  "порога ШИМ\",\"help\":\"Чем выше ШИМ, тем чаще мигание\",\"offset\":28,\"size\":1},{\"key\":\"pwm_alarm_sour" \
-  "ce\",\"type\":\"u8\",\"default\":0,\"label\":\"Порог\",\"options\":[{\"value\":0,\"id\":\"APP\",\"label\":\"Из настрое" \
-  "к приложения LoEUC\"},{\"value\":1,\"id\":\"FIXED\",\"label\":\"Свой\"}],\"depends\":{\"pwm_alarm\":true},\"offs" \
-  "et\":29,\"size\":1},{\"key\":\"pwm_alarm_threshold\",\"type\":\"u8\",\"default\":80,\"min\":30,\"max\":99,\"unit\":" \
-  "\"%\",\"label\":\"Свой порог ШИМ\",\"depends\":{\"pwm_alarm\":true,\"pwm_alarm_source\":1},\"offset\":30,\"size" \
-  "\":1}]},{\"title\":\"Дисплей\",\"help\":\"Яркость экрана\",\"fields\":[{\"key\":\"brightness\",\"type\":\"u8\",\"def" \
-  "ault\":100,\"min\":5,\"max\":100,\"step\":5,\"unit\":\"%\",\"widget\":\"range\",\"label\":\"Яркость\",\"offset\":31,\"" \
-  "size\":1}]},{\"title\":\"Анимации\",\"help\":\"Заставка при включении и анимация выключения\",\"fields\":[{" \
-  "\"key\":\"intro_logo\",\"type\":\"bool\",\"default\":true,\"section\":\"При включении\",\"label\":\"Логотип при в" \
-  "ключении\",\"help\":\"После логотипа играет случайная из отмеченных заставок. Без логотипа данные по" \
-  "являются сразу\",\"preview\":\"logo\",\"offset\":32,\"size\":1},{\"key\":\"intro_clawd\",\"type\":\"bool\",\"defau" \
-  "lt\":false,\"label\":\"Заставки Clawd\",\"help\":\"Играют заставки Clawd\",\"widget\":\"clawd\",\"depends\":{\"i" \
-  "ntro_logo\":true},\"offset\":33,\"size\":1},{\"key\":\"intro_wave\",\"type\":\"bool\",\"default\":true,\"label\":" \
-  "\"Волна\",\"help\":\"Волна с пузырями проходит слева направо и открывает данные\",\"preview\":\"wave\",\"de" \
-  "pends\":{\"intro_logo\":true,\"intro_clawd\":false},\"subitem\":true,\"offset\":34,\"size\":1},{\"key\":\"intr" \
-  "o_break\",\"type\":\"bool\",\"default\":true,\"label\":\"Разрушение\",\"help\":\"Логотип трескается и рассыпае" \
-  "тся на куски\",\"preview\":\"break\",\"depends\":{\"intro_logo\":true,\"intro_clawd\":false},\"subitem\":true" \
-  ",\"offset\":35,\"size\":1},{\"key\":\"intro_explosion\",\"type\":\"bool\",\"default\":true,\"label\":\"Взрыв\",\"he" \
-  "lp\":\"Логотип разлетается облаком частиц, как TNT в Minecraft\",\"preview\":\"explosion\",\"depends\":{\"" \
-  "intro_logo\":true,\"intro_clawd\":false},\"subitem\":true,\"offset\":36,\"size\":1},{\"key\":\"poweroff_anim" \
-  "ation\",\"type\":\"bool\",\"default\":true,\"section\":\"При выключении\",\"label\":\"Анимация выключения\",\"he" \
-  "lp\":\"Экран сжимается в линию, затем в точку и гаснет, как у старого телевизора\",\"preview\":\"power" \
-  "off\",\"offset\":37,\"size\":1}]},{\"title\":\"Кнопка\",\"help\":\"Сколько держать кнопку, чтобы включить и " \
-  "выключить дисплей\",\"fields\":[{\"key\":\"power_on_ms\",\"type\":\"u16\",\"default\":500,\"min\":100,\"max\":300" \
-  "0,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для включения\",\"offset\":38,\"size\":2},{\"key\":\"power_o" \
-  "ff_ms\",\"type\":\"u16\",\"default\":1000,\"min\":500,\"max\":5000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержани" \
-  "е для выключения\",\"help\":\"Более короткое нажатие переключает экран\",\"offset\":40,\"size\":2}]},{\"ti" \
-  "tle\":\"Обновление по Bluetooth\",\"help\":\"Прошивка с телефона без кабеля\",\"fields\":[{\"key\":\"ble_upd" \
-  "ate\",\"type\":\"bool\",\"default\":true,\"label\":\"Разрешить обновление прошивки по Bluetooth\",\"help\":\"Р" \
-  "ежим обновления включается, только если при включении держать кнопку около 4 секунд после того, " \
-  "как загорится экран, пока не заполнится полоса. Нужен заряд не ниже 30% или подключённый USB. В " \
-  "обычной работе прошить дисплей по Bluetooth нельзя\",\"offset\":42,\"size\":1}]}]}"
+  "ze\":1},{\"key\":\"charge_screen\",\"type\":\"bool\",\"default\":true,\"label\":\"Экран зарядки колеса\",\"help\"" \
+  ":\"Пока колесо заряжается, дисплей сам переходит на молнию, залитую на заряд колеса. Сверху напря" \
+  "жение и ток зарядки, снизу температура самой горячей точки батареи и зарядника. Анимация каждый " \
+  "раз случайная из трёх. Кнопка листает остальные экраны как обычно. Зарядку сообщает LoEUC раз в " \
+  "секунду вместе со снимком метрик\",\"preview\":\"charging\",\"offset\":28,\"size\":1}]},{\"title\":\"Предупр" \
+  "еждение о ШИМ\",\"help\":\"Мигание экрана, когда ШИМ подходит к пределу\",\"fields\":[{\"key\":\"pwm_alarm" \
+  "\",\"type\":\"bool\",\"default\":true,\"label\":\"Мигать экраном при превышении порога ШИМ\",\"help\":\"Чем вы" \
+  "ше ШИМ, тем чаще мигание\",\"offset\":29,\"size\":1},{\"key\":\"pwm_alarm_source\",\"type\":\"u8\",\"default\":" \
+  "0,\"label\":\"Порог\",\"options\":[{\"value\":0,\"id\":\"APP\",\"label\":\"Из настроек приложения LoEUC\"},{\"val" \
+  "ue\":1,\"id\":\"FIXED\",\"label\":\"Свой\"}],\"depends\":{\"pwm_alarm\":true},\"offset\":30,\"size\":1},{\"key\":\"p" \
+  "wm_alarm_threshold\",\"type\":\"u8\",\"default\":80,\"min\":30,\"max\":99,\"unit\":\"%\",\"label\":\"Свой порог ШИ" \
+  "М\",\"depends\":{\"pwm_alarm\":true,\"pwm_alarm_source\":1},\"offset\":31,\"size\":1}]},{\"title\":\"Дисплей\"," \
+  "\"help\":\"Яркость экрана\",\"fields\":[{\"key\":\"brightness\",\"type\":\"u8\",\"default\":100,\"min\":5,\"max\":10" \
+  "0,\"step\":5,\"unit\":\"%\",\"widget\":\"range\",\"label\":\"Яркость\",\"offset\":32,\"size\":1}]},{\"title\":\"Анима" \
+  "ции\",\"help\":\"Заставка при включении и анимация выключения\",\"fields\":[{\"key\":\"intro_logo\",\"type\":" \
+  "\"bool\",\"default\":true,\"section\":\"При включении\",\"label\":\"Логотип при включении\",\"help\":\"После ло" \
+  "готипа играет случайная из отмеченных заставок. Без логотипа данные появляются сразу\",\"preview\":" \
+  "\"logo\",\"offset\":33,\"size\":1},{\"key\":\"intro_clawd\",\"type\":\"bool\",\"default\":false,\"label\":\"Заставк" \
+  "и Clawd\",\"help\":\"Играют заставки Clawd\",\"widget\":\"clawd\",\"depends\":{\"intro_logo\":true},\"offset\":" \
+  "34,\"size\":1},{\"key\":\"intro_wave\",\"type\":\"bool\",\"default\":true,\"label\":\"Волна\",\"help\":\"Волна с пу" \
+  "зырями проходит слева направо и открывает данные\",\"preview\":\"wave\",\"depends\":{\"intro_logo\":true," \
+  "\"intro_clawd\":false},\"subitem\":true,\"offset\":35,\"size\":1},{\"key\":\"intro_break\",\"type\":\"bool\",\"de" \
+  "fault\":true,\"label\":\"Разрушение\",\"help\":\"Логотип трескается и рассыпается на куски\",\"preview\":\"b" \
+  "reak\",\"depends\":{\"intro_logo\":true,\"intro_clawd\":false},\"subitem\":true,\"offset\":36,\"size\":1},{\"k" \
+  "ey\":\"intro_explosion\",\"type\":\"bool\",\"default\":true,\"label\":\"Взрыв\",\"help\":\"Логотип разлетается о" \
+  "блаком частиц, как TNT в Minecraft\",\"preview\":\"explosion\",\"depends\":{\"intro_logo\":true,\"intro_cl" \
+  "awd\":false},\"subitem\":true,\"offset\":37,\"size\":1},{\"key\":\"poweroff_animation\",\"type\":\"bool\",\"defa" \
+  "ult\":true,\"section\":\"При выключении\",\"label\":\"Анимация выключения\",\"help\":\"Экран сжимается в лин" \
+  "ию, затем в точку и гаснет, как у старого телевизора\",\"preview\":\"poweroff\",\"offset\":38,\"size\":1}" \
+  "]},{\"title\":\"Кнопка\",\"help\":\"Сколько держать кнопку, чтобы включить и выключить дисплей\",\"fields" \
+  "\":[{\"key\":\"power_on_ms\",\"type\":\"u16\",\"default\":500,\"min\":100,\"max\":3000,\"step\":100,\"unit\":\"мс\",\"" \
+  "label\":\"Удержание для включения\",\"offset\":39,\"size\":2},{\"key\":\"power_off_ms\",\"type\":\"u16\",\"defau" \
+  "lt\":1000,\"min\":500,\"max\":5000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для выключения\",\"help\":\"" \
+  "Более короткое нажатие переключает экран\",\"offset\":41,\"size\":2}]},{\"title\":\"Обновление по Blueto" \
+  "oth\",\"help\":\"Прошивка с телефона без кабеля\",\"fields\":[{\"key\":\"ble_update\",\"type\":\"bool\",\"defaul" \
+  "t\":true,\"label\":\"Разрешить обновление прошивки по Bluetooth\",\"help\":\"Режим обновления включается" \
+  ", только если при включении держать кнопку около 4 секунд после того, как загорится экран, пока " \
+  "не заполнится полоса. Нужен заряд не ниже 30% или подключённый USB. В обычной работе прошить дис" \
+  "плей по Bluetooth нельзя\",\"offset\":43,\"size\":1}]}]}"

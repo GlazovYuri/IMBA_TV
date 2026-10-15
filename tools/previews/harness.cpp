@@ -10,6 +10,7 @@
 #include "animations.h"
 #include "config.h"
 #include "display.h"
+#include "screen_charge.h"
 #include "snapshot.h"
 #include "utils.h"
 
@@ -223,17 +224,35 @@ static uint32_t crc32(const uint8_t* data, size_t len)
   return ~crc;
 }
 
-// снимок LoEUC без метрик с меткой времени ts одним куском, как его пишет телефон при большом MTU
-static void feedSnapshot(uint64_t ts)
+// метрика снимка: код и значение * 1000
+struct metric_t
 {
-  uint8_t snap[13] = {'L', 'E', 3, 0};
+  uint8_t code;
+  int32_t value;
+};
+
+// снимок LoEUC с меткой времени ts одним куском, как его пишет телефон при большом MTU
+static void feedSnapshot(uint64_t ts, const metric_t* metrics = nullptr, uint8_t count = 0)
+{
+  uint8_t snap[13 + 5 * 33] = {'L', 'E', 3, 0};
   for(int i = 0; i < 8; i++) snap[4 + i] = ts >> (56 - i * 8);
-  uint32_t crc = crc32(snap, sizeof(snap));
-  uint8_t chunk[14 + sizeof(snap)] = {'L', 'E', 1, 1, 0, 0, 0, 0, 0, sizeof(snap),
+  snap[12] = count;
+  for(int i = 0; i < count; i++)
+  {
+    uint8_t* m = snap + 13 + i * 5;
+    m[0] = metrics[i].code;
+    for(int b = 0; b < 4; b++) m[1 + b] = (uint32_t)metrics[i].value >> (24 - b * 8);
+  }
+  uint16_t len = 13 + 5 * count;
+  uint32_t crc = crc32(snap, len);
+  uint8_t chunk[14 + sizeof(snap)] = {'L', 'E', 1, 1, 0, 0, 0, 0, (uint8_t)(len >> 8), (uint8_t)len,
                                       (uint8_t)(crc >> 24), (uint8_t)(crc >> 16), (uint8_t)(crc >> 8), (uint8_t)crc};
-  memcpy(chunk + 14, snap, sizeof(snap));
-  snapshotChunk(chunk, sizeof(chunk));
+  memcpy(chunk + 14, snap, len);
+  snapshotChunk(chunk, 14 + len);
 }
+
+// колесо на зарядке: идёт зарядка, ток 8.2 А, самая горячая точка батареи 34.6 °C, зарядник 41.3 °C
+static const metric_t charging_metrics[] = {{33, 1000}, {27, 8200}, {18, 34600}, {29, 41300}};
 
 static void saveScreens(const char* path)
 {
@@ -361,5 +380,34 @@ int main(int argc, char** argv)
   save((out + "/poweroff.bin").c_str());
 
   saveScreens((out + "/screens.bin").c_str());
+
+  // зарядка: снимок раз в секунду, экран зарядки открывается сам. Оформление при открытии случайное,
+  // здесь все по очереди, каждое со своим появлением
+  const uint32_t charge_hold[charge_styles] = {4200, 5000, 4400};
+  fw_config_t& cfg = configMut();
+  cfg = FW_CONFIG_DEFAULTS;
+  begin();
+  for(uint8_t style = 0; style < charge_styles; style++)
+  {
+    displayInit();
+    displaySetBrightness(100);
+    feedSnapshot(1791806430000ULL, charging_metrics, sizeof(charging_metrics) / sizeof(charging_metrics[0]));
+    d.last_frame_ms = millis();
+    displayRenderIface(dev_charge, false, d);  // открывает экран зарядки, на дисплей кадр не уходит
+    screenChargeOpen(style);
+    uint32_t start = millis(), next_snap = start + 1000;
+    while(millis() - start < charge_hold[style])
+    {
+      if((int32_t)(millis() - next_snap) >= 0)
+      {
+        feedSnapshot(1791806430000ULL, charging_metrics, sizeof(charging_metrics) / sizeof(charging_metrics[0]));
+        next_snap += 1000;
+      }
+      d.last_frame_ms = millis();
+      displayDrawIface(dev_charge, false, d);
+      delay(40);
+    }
+  }
+  save((out + "/charging.bin").c_str());
   return 0;
 }

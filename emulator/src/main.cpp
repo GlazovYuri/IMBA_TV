@@ -246,7 +246,8 @@ struct Field
   const char* title;
   double value;
   bool present;
-  int offset; // смещение в пакете LoEUC
+  int offset; // смещение в пакете LoEUC, -1 - величина есть только в снимке 2c07
+  uint8_t code; // код метрики в снимке 2c07, 0 - в снимок не идёт
 };
 
 struct Phone
@@ -254,6 +255,7 @@ struct Phone
   bool enabled = true;   // приложение LoEUC запущено и ищет устройство
   bool tx = true;        // слать телеметрию после подключения
   bool ride = false;     // имитация поездки
+  bool charge_sim = false; // имитация зарядки: заряд растёт, к концу ток падает
   uint32_t interval_ms = 100;
   uint8_t frame = 0;
   uint64_t connect_at = 0;
@@ -266,14 +268,18 @@ struct Phone
                       std::chrono::system_clock::now().time_since_epoch()).count();
   double trip_ms = 0;
   uint64_t next_snap = 0;
-  Field fields[7] = {
-    {"speed", "скорость, км/ч", 25, true, 6},
-    {"pwm", "ШИМ, %", 40, true, 8},
-    {"volt", "напряжение, В", 100.8, true, 10},
-    {"charge", "заряд колеса, %", 80, true, 12},
-    {"temp", "температура, °C", 35, true, 14},
-    {"trip", "пробег, км", 12.3, true, 16},
-    {"limit", "порог ШИМ, %", 80, true, 18},
+  Field fields[11] = {
+    {"speed", "скорость, км/ч", 25, true, 6, 1},
+    {"pwm", "ШИМ, %", 40, true, 8, 2},
+    {"volt", "напряжение, В", 100.8, true, 10, 3},
+    {"charge", "заряд колеса, %", 80, true, 12, 12},
+    {"temp", "температура, °C", 35, true, 14, 13},
+    {"trip", "пробег, км", 12.3, true, 16, 24},
+    {"limit", "порог ШИМ, %", 80, true, 18, 0},
+    {"charging", "зарядка идёт (0 или 1), снимок", 0, true, -1, 33},
+    {"chgcur", "ток зарядки, А, снимок", 8.2, true, -1, 27},
+    {"bathot", "самая горячая точка АКБ, °C, снимок", 34.6, true, -1, 18},
+    {"chgtemp", "температура зарядника, °C, снимок", 41.3, true, -1, 29},
   };
   Field* field(const std::string& k)
   {
@@ -303,6 +309,7 @@ static BleCmd buildPacket()
   c.data[3] = phone.frame++;
   for(auto& f : phone.fields)
   {
+    if(f.offset < 0) continue;
     int16_t v = INT16_MIN;
     if(f.present) v = (int16_t)lround(constrainD(f.value * 10, -32767, 32767));
     c.data[f.offset] = (uint16_t)v >> 8;
@@ -330,19 +337,15 @@ static uint32_t crc32(const std::vector<uint8_t>& v)
 // снимок LoEUC: 'L' 'E' 03, флаги, метка времени (мс), N метрик по 5 байт, при поездке блок на 22 байта
 static std::vector<uint8_t> buildSnapshot()
 {
-  static const struct { const char* key; uint8_t code; } metrics[] = {
-    {"speed", 1}, {"pwm", 2}, {"volt", 3}, {"charge", 12}, {"temp", 13}, {"trip", 24},
-  };
   std::vector<uint8_t> p = {'L', 'E', 3, (uint8_t)(phone.ride ? 1 : 0)};
   putBe(p, (uint64_t)phone.clock_ms, 8);
   size_t n_pos = p.size();
   p.push_back(0);
-  for(auto& m : metrics)
+  for(auto& f : phone.fields)
   {
-    Field* f = phone.field(m.key);
-    if(!f->present) continue;
-    p.push_back(m.code);
-    putBe(p, (uint32_t)(int32_t)lround(f->value * 1000), 4);
+    if(!f.code || !f.present) continue;
+    p.push_back(f.code);
+    putBe(p, (uint32_t)(int32_t)lround(f.value * 1000), 4);
     p[n_pos]++;
   }
   if(phone.ride)
@@ -405,6 +408,27 @@ static void rideStep(double dt)
   phone.field("temp")->value = constrainD(phone.field("temp")->value + (phone.field("pwm")->value - 40) * dt * 0.002, 20, 80);
 }
 
+// зарядка: процент в секунду, до 80 % ток полный, дальше падает; на 100 % зарядка кончается
+static void chargeStep(double dt)
+{
+  Field* charge = phone.field("charge");
+  Field* current = phone.field("chgcur");
+  phone.field("charging")->value = 1;
+  charge->value = constrainD(charge->value + dt * 1.0, 0, 100);
+  current->value = round((charge->value < 80 ? 8.2 : 8.2 * (100 - charge->value) / 20 + 0.3) * 10) / 10;
+  phone.field("volt")->value = round((84 + charge->value * 0.168) * 10) / 10;
+  Field* hot = phone.field("bathot");
+  hot->value = constrainD(hot->value + dt * 0.05, -20, 45);
+  Field* charger = phone.field("chgtemp");
+  charger->value = constrainD(charger->value + dt * 0.08, -20, 55);
+  if(charge->value >= 100)
+  {
+    phone.field("charging")->value = 0;
+    current->value = 0;
+    phone.charge_sim = false;
+  }
+}
+
 static void phoneThread()
 {
   uint64_t prev = nowUs();
@@ -416,6 +440,7 @@ static void phoneThread()
     double dt = (now - prev) / 1e6;
     prev = now;
     if(phone.ride) rideStep(dt);
+    if(phone.charge_sim) chargeStep(dt);
     phone.clock_ms += dt * 1000 * (1 + phone.clock_ppm * 1e-6);
     if(phone.ride) phone.trip_ms += dt * 1000;
 
@@ -782,7 +807,17 @@ static std::string applyCmd(const std::string& k, const std::string& v)
       blePush(c);
     }
     else if(k == "tx") phone.tx = parseBool(v);
-    else if(k == "ride") phone.ride = parseBool(v);
+    else if(k == "ride")
+    {
+      phone.ride = parseBool(v);
+      if(phone.ride) phone.charge_sim = false;
+    }
+    else if(k == "chargesim")
+    {
+      phone.charge_sim = parseBool(v);
+      if(phone.charge_sim) phone.ride = false;
+      else phone.field("charging")->value = 0;
+    }
     else if(k == "interval") phone.interval_ms = (uint32_t)constrainD(atof(v.c_str()), 5, 10000);
     else if(k == "packet") return writeHex(k, v, kCharTelemetry);
     else if(k == "chunk") return writeHex(k, v, kCharSnapshot); // сырой кусок снимка
@@ -900,11 +935,11 @@ static std::string stateJson()
   {
     std::lock_guard<std::mutex> lk(env_mtx);
     snprintf(b, sizeof(b),
-             "\"phone\":{\"enabled\":%d,\"tx\":%d,\"ride\":%d,\"interval\":%u,\"frame\":%u,\"snap\":%d,\"mtu\":%u,"
+             "\"phone\":{\"enabled\":%d,\"tx\":%d,\"ride\":%d,\"chargesim\":%d,\"interval\":%u,\"frame\":%u,\"snap\":%d,\"mtu\":%u,"
              "\"clockppm\":%.1f,\"fields\":[",
-             phone.enabled, phone.tx, phone.ride, phone.interval_ms, phone.frame, phone.snap, phone.mtu, phone.clock_ppm);
+             phone.enabled, phone.tx, phone.ride, phone.charge_sim, phone.interval_ms, phone.frame, phone.snap, phone.mtu, phone.clock_ppm);
     s += b;
-    for(int i = 0; i < 7; i++)
+    for(size_t i = 0; i < sizeof(phone.fields) / sizeof(phone.fields[0]); i++)
     {
       const Field& f = phone.fields[i];
       snprintf(b, sizeof(b), "%s{\"key\":\"%s\",\"title\":\"%s\",\"value\":%.1f,\"present\":%d}", i ? "," : "", f.key,
