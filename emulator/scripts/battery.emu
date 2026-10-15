@@ -1,0 +1,42 @@
+# Батарея колеса «Автоматически» (по умолчанию): дисплей узнаёт её по напряжению и заряду, пока колесо стоит,
+# и оставляет под цифры напряжения место по её максимальному напряжению. Сверху на первом экране напряжение:
+# у 20S (84 В) место под «84.0», полоска длиннее, у 24S и больше - под «100.8». Заряд платы не проверяется
+
+cfg.screen1_v1=3
+speed=0
+pwm=0
+volt=81.2
+charge=90
+button=1
+wait 900
+button=0
+wait 6000
+expect connected=1
+echo 81.2 В при 90 %: 20S
+expect glass=scripts/refs/battery-20s.txt
+
+echo на ходу напряжение проседает: батарея не меняется
+speed=30
+volt=70
+wait 3000
+speed=0
+volt=81.2
+wait 300
+expect glass=scripts/refs/battery-20s.txt
+
+echo другое колесо: 95 В при 80 % - 24S
+volt=95
+charge=80
+wait 2500
+expect glass=scripts/refs/battery-24s.txt
+
+echo батарея задана в настройках: 20S, хотя по напряжению и заряду 24S
+cfg.wheel_voltage_x10=840
+reset=pin
+wait 300
+button=1
+wait 900
+button=0
+wait 6000
+expect connected=1
+expect glass=scripts/refs/battery-fixed.txt

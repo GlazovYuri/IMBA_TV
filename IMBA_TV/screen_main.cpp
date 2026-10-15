@@ -1,5 +1,4 @@
 #include "screen_main.h"
-#include "config.h"
 #include "euc_values.h"
 #include "screen_clock.h"
 #include "GyverOLED.h"
@@ -101,7 +100,7 @@ static void drawEucVoltage(int x, int y, euc_data_t& data)
     snprintf(text, sizeof(text), "--.-");
 
   // по максимальному напряжению колеса резервируется место под текст
-  uint16_t voltage_max_x10 = config().wheel_voltage_x10;
+  uint16_t voltage_max_x10 = eucVoltageMax(data);
   char max_text[12];
   snprintf(max_text, sizeof(max_text), "%u.%u", voltage_max_x10 / 10, voltage_max_x10 % 10);
 

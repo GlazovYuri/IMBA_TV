@@ -209,6 +209,7 @@ static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t whee
   head[n++] = timezone;
   head[n++] = has_time;
   for(int i = 0; i < 8; i++) head[n++] = unix_ms >> (i * 8);
+  head[n++] = d.battery_max_x10 & 0xFF; head[n++] = d.battery_max_x10 >> 8;
   fwrite(head, 1, n, f);
   for(int page = 0; page < 8; page++) fwrite(&ram[page][2], 1, 128, f);
 }
@@ -340,6 +341,17 @@ static void saveScreens(const char* path)
   // метка не похожа на Unix-время: часов нет
   feedSnapshot(123456789ULL);
   writeScreen(f, 4, grid_default, 1512, sample, 82, false);
+
+  // батарея «Автоматически»: пока не узнана, место под 151.2 В; узнана 20S - под 84.0 В
+  euc_data_t small = sampleData();
+  small.voltage_x10 = 812;
+  euc_data_t small_known = small;
+  small_known.battery_max_x10 = 840;
+  const uint8_t main_voltage[4] = {3, 0, 1, 5};
+  writeScreen(f, 1, main_voltage, CONFIG_WHEEL_VOLTAGE_X10_AUTO, small, 82, false);
+  writeScreen(f, 1, main_voltage, CONFIG_WHEEL_VOLTAGE_X10_AUTO, small_known, 82, false);
+  writeScreen(f, 2, grid_default, CONFIG_WHEEL_VOLTAGE_X10_AUTO, small, 82, false);
+  writeScreen(f, 2, grid_default, CONFIG_WHEEL_VOLTAGE_X10_AUTO, small_known, 82, false);
   fclose(f);
 }
 

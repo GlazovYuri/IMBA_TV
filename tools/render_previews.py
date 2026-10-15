@@ -240,7 +240,7 @@ def write_font(gyveroled):
     print(f'{os.path.relpath(FONT_JS, ROOT)}: {len(rows)} символов')
 
 
-SCREEN_HEAD = struct.Struct('<B4BHBBBBHBBHhHHHBBQ')
+SCREEN_HEAD = struct.Struct('<B4BHBBBBHBBHhHHHBBQH')
 
 
 def write_screens(path):
@@ -250,7 +250,7 @@ def write_screens(path):
     cases = []
     for pos in range(0, len(data), record):
         (kind, v1, v2, v3, v4, wheel, dev, charging, connected, present, speed, pwm, charge,
-         voltage, temperature, trip, interval, last, timezone, has_time, unix_ms) = SCREEN_HEAD.unpack_from(data, pos)
+         voltage, temperature, trip, interval, last, timezone, has_time, unix_ms, battery_max) = SCREEN_HEAD.unpack_from(data, pos)
         frame = data[pos + SCREEN_HEAD.size:pos + record]
         case = {
             'screen': {'type': kind, 'v': [v1, v2, v3, v4]},
@@ -261,6 +261,9 @@ def write_screens(path):
                      'charge': charge, 'voltage_x10': voltage, 'temperature_x10': temperature, 'trip_x10': trip,
                      'frame_interval_ms': interval, 'frame_last_interval_ms': last},
         }
+        # батарея, узнанная по напряжению и заряду: нужна только при «Автоматически»
+        if battery_max:
+            case['data']['battery_max_x10'] = battery_max
         # часам нужны время от телефона (нет - None) и пояс из настроек: экрану часов и экрану
         # с двумя значениями, у которого часы в верхней строке
         if kind == 4 or (kind == 1 and v1 == 6):

@@ -1,6 +1,7 @@
 #include "ble.h"
 #include "version.h"
 #include "snapshot.h"
+#include "euc_values.h"
 #include <bluefruit.h>
 
 const int8_t tx_power = 8; //dBm
@@ -148,6 +149,7 @@ static void eucCharWriteCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint
   if(!checkMagic(data)) return;
 
   dataParse(data);
+  eucBatteryDetect(euc_data);
   frameTimingUpdate();
 }
 

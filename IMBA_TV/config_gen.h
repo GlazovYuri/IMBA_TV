@@ -53,7 +53,7 @@ struct __attribute__((packed)) fw_config_t
 
 static_assert(sizeof(fw_config_t) == 44, "config.json и fw_config_t разошлись");
 
-#define FW_CONFIG_DEFAULTS { 1, 2, 0, 1, 5, 1, 3, 0, 1, 5, 2, 2, 3, 4, 5, 3, 2, 3, 4, 5, 0, 2, 3, 4, 5, 1512, 60, 1, 1, 0, 80, 100, 1, 0, 1, 1, 1, 1, 500, 1000, 1 }
+#define FW_CONFIG_DEFAULTS { 1, 2, 0, 1, 5, 1, 3, 0, 1, 5, 2, 2, 3, 4, 5, 3, 2, 3, 4, 5, 0, 2, 3, 4, 5, 0, 60, 1, 1, 0, 80, 100, 1, 0, 1, 1, 1, 1, 500, 1000, 1 }
 
 enum
 {
@@ -222,6 +222,7 @@ enum
   CONFIG_SCREEN5_V4_TEMPERATURE = 4,
   CONFIG_SCREEN5_V4_TRIP = 5,
   CONFIG_SCREEN5_V4_CLOCK = 6,
+  CONFIG_WHEEL_VOLTAGE_X10_AUTO = 0,
   CONFIG_WHEEL_VOLTAGE_X10_20S = 840,
   CONFIG_WHEEL_VOLTAGE_X10_24S = 1008,
   CONFIG_WHEEL_VOLTAGE_X10_30S = 1260,
@@ -288,7 +289,7 @@ static inline void configSanitize(fw_config_t& c)
   switch(c.screen5_v2) { case 0: case 1: case 2: case 3: case 4: case 5: case 6: break; default: c.screen5_v2 = 3; }
   switch(c.screen5_v3) { case 0: case 1: case 2: case 3: case 4: case 5: case 6: break; default: c.screen5_v3 = 4; }
   switch(c.screen5_v4) { case 0: case 1: case 2: case 3: case 4: case 5: case 6: break; default: c.screen5_v4 = 5; }
-  switch(c.wheel_voltage_x10) { case 840: case 1008: case 1260: case 1344: case 1512: case 1680: case 1764: break; default: c.wheel_voltage_x10 = 1512; }
+  switch(c.wheel_voltage_x10) { case 0: case 840: case 1008: case 1260: case 1344: case 1512: case 1680: case 1764: break; default: c.wheel_voltage_x10 = 0; }
   switch(c.timezone) { case 0: case 4: case 8: case 12: case 16: case 20: case 24: case 28: case 32: case 36: case 40: case 44: case 48: case 52: case 56: case 60: case 64: case 68: case 72: case 76: case 80: case 84: case 88: case 92: case 96: case 100: case 104: break; default: c.timezone = 60; }
   if(c.charge_screen > 1) c.charge_screen = 1;
   if(c.pwm_alarm > 1) c.pwm_alarm = 1;
@@ -422,64 +423,65 @@ static inline void configSanitize(fw_config_t& c)
   "bel\":\"Заряд колеса, %\"},{\"value\":3,\"id\":\"VOLTAGE\",\"label\":\"Напряжение колеса, В\"},{\"value\":4,\"id" \
   "\":\"TEMPERATURE\",\"label\":\"Температура, °C\"},{\"value\":5,\"id\":\"TRIP\",\"label\":\"Пробег, км\"},{\"value\"" \
   ":6,\"id\":\"CLOCK\",\"label\":\"Часы\"}],\"offset\":24,\"size\":1},{\"key\":\"wheel_voltage_x10\",\"type\":\"u16\",\"" \
-  "default\":1512,\"label\":\"Батарея колеса\",\"help\":\"По максимальному напряжению рассчитывается место " \
-  "под цифры напряжения на экранах\",\"options\":[{\"value\":840,\"id\":\"20S\",\"label\":\"84 В (20S)\"},{\"valu" \
-  "e\":1008,\"id\":\"24S\",\"label\":\"100,8 В (24S)\"},{\"value\":1260,\"id\":\"30S\",\"label\":\"126 В (30S)\"},{\"va" \
-  "lue\":1344,\"id\":\"32S\",\"label\":\"134,4 В (32S)\"},{\"value\":1512,\"id\":\"36S\",\"label\":\"151,2 В (36S)\"}," \
-  "{\"value\":1680,\"id\":\"40S\",\"label\":\"168 В (40S)\"},{\"value\":1764,\"id\":\"42S\",\"label\":\"176,4 В (42S)\"" \
-  "}],\"offset\":25,\"size\":2},{\"key\":\"timezone\",\"type\":\"u8\",\"default\":60,\"label\":\"Часовой пояс\",\"help" \
-  "\":\"Для экрана с часами: время приходит из LoEUC, дисплей показывает его в этом поясе. На летнее " \
-  "время сам не переходит\",\"options\":[{\"value\":0,\"id\":\"UTC_M12\",\"label\":\"UTC-12\"},{\"value\":4,\"id\":\"" \
-  "UTC_M11\",\"label\":\"UTC-11\"},{\"value\":8,\"id\":\"UTC_M10\",\"label\":\"UTC-10\"},{\"value\":12,\"id\":\"UTC_M9\"" \
-  ",\"label\":\"UTC-9\"},{\"value\":16,\"id\":\"UTC_M8\",\"label\":\"UTC-8\"},{\"value\":20,\"id\":\"UTC_M7\",\"label\":\"" \
-  "UTC-7\"},{\"value\":24,\"id\":\"UTC_M6\",\"label\":\"UTC-6\"},{\"value\":28,\"id\":\"UTC_M5\",\"label\":\"UTC-5\"},{\"" \
-  "value\":32,\"id\":\"UTC_M4\",\"label\":\"UTC-4\"},{\"value\":36,\"id\":\"UTC_M3\",\"label\":\"UTC-3\"},{\"value\":40," \
-  "\"id\":\"UTC_M2\",\"label\":\"UTC-2\"},{\"value\":44,\"id\":\"UTC_M1\",\"label\":\"UTC-1\"},{\"value\":48,\"id\":\"UTC_" \
-  "0\",\"label\":\"UTC\"},{\"value\":52,\"id\":\"UTC_P1\",\"label\":\"UTC+1\"},{\"value\":56,\"id\":\"UTC_P2\",\"label\":\"" \
-  "UTC+2, Калининград\"},{\"value\":60,\"id\":\"UTC_P3\",\"label\":\"UTC+3, Москва, Минск, Стамбул\"},{\"value\"" \
-  ":64,\"id\":\"UTC_P4\",\"label\":\"UTC+4, Самара, Тбилиси, Ереван, Баку\"},{\"value\":68,\"id\":\"UTC_P5\",\"lab" \
-  "el\":\"UTC+5, Екатеринбург, Ташкент, Астана\"},{\"value\":72,\"id\":\"UTC_P6\",\"label\":\"UTC+6, Омск, Бишк" \
-  "ек\"},{\"value\":76,\"id\":\"UTC_P7\",\"label\":\"UTC+7, Новосибирск, Красноярск\"},{\"value\":80,\"id\":\"UTC_P" \
-  "8\",\"label\":\"UTC+8, Иркутск, Пекин\"},{\"value\":84,\"id\":\"UTC_P9\",\"label\":\"UTC+9, Якутск, Токио, Сеу" \
-  "л\"},{\"value\":88,\"id\":\"UTC_P10\",\"label\":\"UTC+10, Владивосток\"},{\"value\":92,\"id\":\"UTC_P11\",\"label\"" \
-  ":\"UTC+11, Магадан, Сахалин\"},{\"value\":96,\"id\":\"UTC_P12\",\"label\":\"UTC+12, Камчатка\"},{\"value\":100" \
-  ",\"id\":\"UTC_P13\",\"label\":\"UTC+13\"},{\"value\":104,\"id\":\"UTC_P14\",\"label\":\"UTC+14\"}],\"offset\":27,\"si" \
-  "ze\":1},{\"key\":\"charge_screen\",\"type\":\"bool\",\"default\":true,\"label\":\"Экран зарядки колеса\",\"help\"" \
-  ":\"Пока колесо заряжается, дисплей сам переходит на молнию, залитую на заряд колеса. Сверху напря" \
-  "жение и ток зарядки, снизу температура самой горячей точки батареи и зарядника. Анимация каждый " \
-  "раз случайная из трёх. Кнопка листает остальные экраны как обычно. Зарядку сообщает LoEUC раз в " \
-  "секунду вместе со снимком метрик\",\"preview\":\"charging\",\"offset\":28,\"size\":1}]},{\"title\":\"Предупр" \
-  "еждение о ШИМ\",\"help\":\"Мигание экрана, когда ШИМ подходит к пределу\",\"fields\":[{\"key\":\"pwm_alarm" \
-  "\",\"type\":\"bool\",\"default\":true,\"label\":\"Мигать экраном при превышении порога ШИМ\",\"help\":\"Чем вы" \
-  "ше ШИМ, тем чаще мигание\",\"offset\":29,\"size\":1},{\"key\":\"pwm_alarm_source\",\"type\":\"u8\",\"default\":" \
-  "0,\"label\":\"Порог\",\"options\":[{\"value\":0,\"id\":\"APP\",\"label\":\"Из настроек приложения LoEUC\"},{\"val" \
-  "ue\":1,\"id\":\"FIXED\",\"label\":\"Свой\"}],\"depends\":{\"pwm_alarm\":true},\"offset\":30,\"size\":1},{\"key\":\"p" \
-  "wm_alarm_threshold\",\"type\":\"u8\",\"default\":80,\"min\":30,\"max\":99,\"unit\":\"%\",\"label\":\"Свой порог ШИ" \
-  "М\",\"depends\":{\"pwm_alarm\":true,\"pwm_alarm_source\":1},\"offset\":31,\"size\":1}]},{\"title\":\"Дисплей\"," \
-  "\"help\":\"Яркость экрана\",\"fields\":[{\"key\":\"brightness\",\"type\":\"u8\",\"default\":100,\"min\":5,\"max\":10" \
-  "0,\"step\":5,\"unit\":\"%\",\"widget\":\"range\",\"label\":\"Яркость\",\"offset\":32,\"size\":1}]},{\"title\":\"Анима" \
-  "ции\",\"help\":\"Заставка при включении и анимация выключения\",\"fields\":[{\"key\":\"intro_logo\",\"type\":" \
-  "\"bool\",\"default\":true,\"section\":\"При включении\",\"label\":\"Логотип при включении\",\"help\":\"После ло" \
-  "готипа играет случайная из отмеченных заставок. Без логотипа данные появляются сразу\",\"preview\":" \
-  "\"logo\",\"offset\":33,\"size\":1},{\"key\":\"intro_clawd\",\"type\":\"bool\",\"default\":false,\"label\":\"Заставк" \
-  "и Clawd\",\"help\":\"Играют заставки Clawd\",\"widget\":\"clawd\",\"depends\":{\"intro_logo\":true},\"offset\":" \
-  "34,\"size\":1},{\"key\":\"intro_wave\",\"type\":\"bool\",\"default\":true,\"label\":\"Волна\",\"help\":\"Волна с пу" \
-  "зырями проходит слева направо и открывает данные\",\"preview\":\"wave\",\"depends\":{\"intro_logo\":true," \
-  "\"intro_clawd\":false},\"subitem\":true,\"offset\":35,\"size\":1},{\"key\":\"intro_break\",\"type\":\"bool\",\"de" \
-  "fault\":true,\"label\":\"Разрушение\",\"help\":\"Логотип трескается и рассыпается на куски\",\"preview\":\"b" \
-  "reak\",\"depends\":{\"intro_logo\":true,\"intro_clawd\":false},\"subitem\":true,\"offset\":36,\"size\":1},{\"k" \
-  "ey\":\"intro_explosion\",\"type\":\"bool\",\"default\":true,\"label\":\"Взрыв\",\"help\":\"Логотип разлетается о" \
-  "блаком частиц, как TNT в Minecraft\",\"preview\":\"explosion\",\"depends\":{\"intro_logo\":true,\"intro_cl" \
-  "awd\":false},\"subitem\":true,\"offset\":37,\"size\":1},{\"key\":\"poweroff_animation\",\"type\":\"bool\",\"defa" \
-  "ult\":true,\"section\":\"При выключении\",\"label\":\"Анимация выключения\",\"help\":\"Экран сжимается в лин" \
-  "ию, затем в точку и гаснет, как у старого телевизора\",\"preview\":\"poweroff\",\"offset\":38,\"size\":1}" \
-  "]},{\"title\":\"Кнопка\",\"help\":\"Сколько держать кнопку, чтобы включить и выключить дисплей\",\"fields" \
-  "\":[{\"key\":\"power_on_ms\",\"type\":\"u16\",\"default\":500,\"min\":100,\"max\":3000,\"step\":100,\"unit\":\"мс\",\"" \
-  "label\":\"Удержание для включения\",\"offset\":39,\"size\":2},{\"key\":\"power_off_ms\",\"type\":\"u16\",\"defau" \
-  "lt\":1000,\"min\":500,\"max\":5000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для выключения\",\"help\":\"" \
-  "Более короткое нажатие переключает экран\",\"offset\":41,\"size\":2}]},{\"title\":\"Обновление по Blueto" \
-  "oth\",\"help\":\"Прошивка с телефона без кабеля\",\"fields\":[{\"key\":\"ble_update\",\"type\":\"bool\",\"defaul" \
-  "t\":true,\"label\":\"Разрешить обновление прошивки по Bluetooth\",\"help\":\"Режим обновления включается" \
-  ", только если при включении держать кнопку около 4 секунд после того, как загорится экран, пока " \
-  "не заполнится полоса. Нужен заряд не ниже 30% или подключённый USB. В обычной работе прошить дис" \
-  "плей по Bluetooth нельзя\",\"offset\":43,\"size\":1}]}]}"
+  "default\":0,\"label\":\"Батарея колеса\",\"help\":\"По максимальному напряжению рассчитывается место под" \
+  " цифры напряжения на экранах. Автоматически: дисплей сам узнаёт батарею по напряжению и заряду к" \
+  "олеса, пока оно стоит\",\"options\":[{\"value\":0,\"id\":\"AUTO\",\"label\":\"Автоматически\"},{\"value\":840,\"" \
+  "id\":\"20S\",\"label\":\"84 В (20S)\"},{\"value\":1008,\"id\":\"24S\",\"label\":\"100,8 В (24S)\"},{\"value\":1260," \
+  "\"id\":\"30S\",\"label\":\"126 В (30S)\"},{\"value\":1344,\"id\":\"32S\",\"label\":\"134,4 В (32S)\"},{\"value\":151" \
+  "2,\"id\":\"36S\",\"label\":\"151,2 В (36S)\"},{\"value\":1680,\"id\":\"40S\",\"label\":\"168 В (40S)\"},{\"value\":1" \
+  "764,\"id\":\"42S\",\"label\":\"176,4 В (42S)\"}],\"offset\":25,\"size\":2},{\"key\":\"timezone\",\"type\":\"u8\",\"de" \
+  "fault\":60,\"label\":\"Часовой пояс\",\"help\":\"Для экрана с часами: время приходит из LoEUC, дисплей п" \
+  "оказывает его в этом поясе. На летнее время сам не переходит\",\"options\":[{\"value\":0,\"id\":\"UTC_M1" \
+  "2\",\"label\":\"UTC-12\"},{\"value\":4,\"id\":\"UTC_M11\",\"label\":\"UTC-11\"},{\"value\":8,\"id\":\"UTC_M10\",\"labe" \
+  "l\":\"UTC-10\"},{\"value\":12,\"id\":\"UTC_M9\",\"label\":\"UTC-9\"},{\"value\":16,\"id\":\"UTC_M8\",\"label\":\"UTC-8" \
+  "\"},{\"value\":20,\"id\":\"UTC_M7\",\"label\":\"UTC-7\"},{\"value\":24,\"id\":\"UTC_M6\",\"label\":\"UTC-6\"},{\"value" \
+  "\":28,\"id\":\"UTC_M5\",\"label\":\"UTC-5\"},{\"value\":32,\"id\":\"UTC_M4\",\"label\":\"UTC-4\"},{\"value\":36,\"id\":" \
+  "\"UTC_M3\",\"label\":\"UTC-3\"},{\"value\":40,\"id\":\"UTC_M2\",\"label\":\"UTC-2\"},{\"value\":44,\"id\":\"UTC_M1\",\"" \
+  "label\":\"UTC-1\"},{\"value\":48,\"id\":\"UTC_0\",\"label\":\"UTC\"},{\"value\":52,\"id\":\"UTC_P1\",\"label\":\"UTC+1" \
+  "\"},{\"value\":56,\"id\":\"UTC_P2\",\"label\":\"UTC+2, Калининград\"},{\"value\":60,\"id\":\"UTC_P3\",\"label\":\"UT" \
+  "C+3, Москва, Минск, Стамбул\"},{\"value\":64,\"id\":\"UTC_P4\",\"label\":\"UTC+4, Самара, Тбилиси, Ереван," \
+  " Баку\"},{\"value\":68,\"id\":\"UTC_P5\",\"label\":\"UTC+5, Екатеринбург, Ташкент, Астана\"},{\"value\":72,\"i" \
+  "d\":\"UTC_P6\",\"label\":\"UTC+6, Омск, Бишкек\"},{\"value\":76,\"id\":\"UTC_P7\",\"label\":\"UTC+7, Новосибирск" \
+  ", Красноярск\"},{\"value\":80,\"id\":\"UTC_P8\",\"label\":\"UTC+8, Иркутск, Пекин\"},{\"value\":84,\"id\":\"UTC_" \
+  "P9\",\"label\":\"UTC+9, Якутск, Токио, Сеул\"},{\"value\":88,\"id\":\"UTC_P10\",\"label\":\"UTC+10, Владивосто" \
+  "к\"},{\"value\":92,\"id\":\"UTC_P11\",\"label\":\"UTC+11, Магадан, Сахалин\"},{\"value\":96,\"id\":\"UTC_P12\",\"l" \
+  "abel\":\"UTC+12, Камчатка\"},{\"value\":100,\"id\":\"UTC_P13\",\"label\":\"UTC+13\"},{\"value\":104,\"id\":\"UTC_P" \
+  "14\",\"label\":\"UTC+14\"}],\"offset\":27,\"size\":1},{\"key\":\"charge_screen\",\"type\":\"bool\",\"default\":true" \
+  ",\"label\":\"Экран зарядки колеса\",\"help\":\"Пока колесо заряжается, дисплей сам переходит на молнию," \
+  " залитую на заряд колеса. Сверху напряжение и ток зарядки, снизу температура самой горячей точки" \
+  " батареи и зарядника. Анимация каждый раз случайная из трёх. Кнопка листает остальные экраны как" \
+  " обычно. Зарядку сообщает LoEUC раз в секунду вместе со снимком метрик\",\"preview\":\"charging\",\"of" \
+  "fset\":28,\"size\":1}]},{\"title\":\"Предупреждение о ШИМ\",\"help\":\"Мигание экрана, когда ШИМ подходит " \
+  "к пределу\",\"fields\":[{\"key\":\"pwm_alarm\",\"type\":\"bool\",\"default\":true,\"label\":\"Мигать экраном при" \
+  " превышении порога ШИМ\",\"help\":\"Чем выше ШИМ, тем чаще мигание\",\"offset\":29,\"size\":1},{\"key\":\"pw" \
+  "m_alarm_source\",\"type\":\"u8\",\"default\":0,\"label\":\"Порог\",\"options\":[{\"value\":0,\"id\":\"APP\",\"label\"" \
+  ":\"Из настроек приложения LoEUC\"},{\"value\":1,\"id\":\"FIXED\",\"label\":\"Свой\"}],\"depends\":{\"pwm_alarm\"" \
+  ":true},\"offset\":30,\"size\":1},{\"key\":\"pwm_alarm_threshold\",\"type\":\"u8\",\"default\":80,\"min\":30,\"max" \
+  "\":99,\"unit\":\"%\",\"label\":\"Свой порог ШИМ\",\"depends\":{\"pwm_alarm\":true,\"pwm_alarm_source\":1},\"offs" \
+  "et\":31,\"size\":1}]},{\"title\":\"Дисплей\",\"help\":\"Яркость экрана\",\"fields\":[{\"key\":\"brightness\",\"typ" \
+  "e\":\"u8\",\"default\":100,\"min\":5,\"max\":100,\"step\":5,\"unit\":\"%\",\"widget\":\"range\",\"label\":\"Яркость\",\"" \
+  "offset\":32,\"size\":1}]},{\"title\":\"Анимации\",\"help\":\"Заставка при включении и анимация выключения\"" \
+  ",\"fields\":[{\"key\":\"intro_logo\",\"type\":\"bool\",\"default\":true,\"section\":\"При включении\",\"label\":\"Л" \
+  "оготип при включении\",\"help\":\"После логотипа играет случайная из отмеченных заставок. Без логоти" \
+  "па данные появляются сразу\",\"preview\":\"logo\",\"offset\":33,\"size\":1},{\"key\":\"intro_clawd\",\"type\":\"" \
+  "bool\",\"default\":false,\"label\":\"Заставки Clawd\",\"help\":\"Играют заставки Clawd\",\"widget\":\"clawd\",\"" \
+  "depends\":{\"intro_logo\":true},\"offset\":34,\"size\":1},{\"key\":\"intro_wave\",\"type\":\"bool\",\"default\":t" \
+  "rue,\"label\":\"Волна\",\"help\":\"Волна с пузырями проходит слева направо и открывает данные\",\"preview" \
+  "\":\"wave\",\"depends\":{\"intro_logo\":true,\"intro_clawd\":false},\"subitem\":true,\"offset\":35,\"size\":1}," \
+  "{\"key\":\"intro_break\",\"type\":\"bool\",\"default\":true,\"label\":\"Разрушение\",\"help\":\"Логотип трескаетс" \
+  "я и рассыпается на куски\",\"preview\":\"break\",\"depends\":{\"intro_logo\":true,\"intro_clawd\":false},\"s" \
+  "ubitem\":true,\"offset\":36,\"size\":1},{\"key\":\"intro_explosion\",\"type\":\"bool\",\"default\":true,\"label\"" \
+  ":\"Взрыв\",\"help\":\"Логотип разлетается облаком частиц, как TNT в Minecraft\",\"preview\":\"explosion\"," \
+  "\"depends\":{\"intro_logo\":true,\"intro_clawd\":false},\"subitem\":true,\"offset\":37,\"size\":1},{\"key\":\"p" \
+  "oweroff_animation\",\"type\":\"bool\",\"default\":true,\"section\":\"При выключении\",\"label\":\"Анимация вык" \
+  "лючения\",\"help\":\"Экран сжимается в линию, затем в точку и гаснет, как у старого телевизора\",\"pre" \
+  "view\":\"poweroff\",\"offset\":38,\"size\":1}]},{\"title\":\"Кнопка\",\"help\":\"Сколько держать кнопку, чтобы" \
+  " включить и выключить дисплей\",\"fields\":[{\"key\":\"power_on_ms\",\"type\":\"u16\",\"default\":500,\"min\":1" \
+  "00,\"max\":3000,\"step\":100,\"unit\":\"мс\",\"label\":\"Удержание для включения\",\"offset\":39,\"size\":2},{\"k" \
+  "ey\":\"power_off_ms\",\"type\":\"u16\",\"default\":1000,\"min\":500,\"max\":5000,\"step\":100,\"unit\":\"мс\",\"labe" \
+  "l\":\"Удержание для выключения\",\"help\":\"Более короткое нажатие переключает экран\",\"offset\":41,\"siz" \
+  "e\":2}]},{\"title\":\"Обновление по Bluetooth\",\"help\":\"Прошивка с телефона без кабеля\",\"fields\":[{\"k" \
+  "ey\":\"ble_update\",\"type\":\"bool\",\"default\":true,\"label\":\"Разрешить обновление прошивки по Bluetoot" \
+  "h\",\"help\":\"Режим обновления включается, только если при включении держать кнопку около 4 секунд " \
+  "после того, как загорится экран, пока не заполнится полоса. Нужен заряд не ниже 30% или подключё" \
+  "нный USB. В обычной работе прошить дисплей по Bluetooth нельзя\",\"offset\":43,\"size\":1}]}]}"
