@@ -268,7 +268,7 @@ struct Phone
                       std::chrono::system_clock::now().time_since_epoch()).count();
   double trip_ms = 0;
   uint64_t next_snap = 0;
-  Field fields[11] = {
+  Field fields[12] = {
     {"speed", "скорость, км/ч", 25, true, 6, 1},
     {"pwm", "ШИМ, %", 40, true, 8, 2},
     {"volt", "напряжение, В", 100.8, true, 10, 3},
@@ -278,6 +278,7 @@ struct Phone
     {"limit", "порог ШИМ, %", 80, true, 18, 0},
     {"charging", "зарядка идёт (0 или 1), снимок", 0, true, -1, 33},
     {"chgcur", "ток зарядки, А, снимок", 8.2, true, -1, 27},
+    {"batcur", "ток АКБ, А (минус - заряд), снимок", 0.3, true, -1, 6},
     {"bathot", "самая горячая точка АКБ, °C, снимок", 34.6, true, -1, 18},
     {"chgtemp", "температура зарядника, °C, снимок", 41.3, true, -1, 29},
   };
@@ -416,6 +417,7 @@ static void chargeStep(double dt)
   phone.field("charging")->value = 1;
   charge->value = constrainD(charge->value + dt * 1.0, 0, 100);
   current->value = round((charge->value < 80 ? 8.2 : 8.2 * (100 - charge->value) / 20 + 0.3) * 10) / 10;
+  phone.field("batcur")->value = -current->value;
   phone.field("volt")->value = round((84 + charge->value * 0.168) * 10) / 10;
   Field* hot = phone.field("bathot");
   hot->value = constrainD(hot->value + dt * 0.05, -20, 45);
@@ -425,6 +427,7 @@ static void chargeStep(double dt)
   {
     phone.field("charging")->value = 0;
     current->value = 0;
+    phone.field("batcur")->value = 0.3;
     phone.charge_sim = false;
   }
 }

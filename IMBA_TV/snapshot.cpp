@@ -14,6 +14,7 @@ static const uint16_t metric_size = 5;
 static const uint16_t snap_max = 512;  // 33 метрики и поездка - около 200 байт, остальное запас
 
 // коды метрик снимка, которые нужны экрану зарядки
+static const uint8_t metric_speed = 1;             // скорость, км/ч
 static const uint8_t metric_battery_current = 6;   // ток АКБ, А
 static const uint8_t metric_battery_temp_max = 18; // температура АКБ макс., °C
 static const uint8_t metric_charge_current = 27;   // ток зарядки, А
@@ -25,6 +26,15 @@ static const int32_t metric_unknown = INT32_MIN;   // телефон эту ве
 static const uint32_t charge_max_age = 3000; //ms
 // без признака зарядки в снимке колесо считается заряжающимся по току зарядки от этого значения
 static const int32_t charge_current_min = 300; //mA
+// Признак зарядки и ток зарядки шлёт только InMotion (признак ещё King Song), у остальных колёс зарядка
+// узнаётся по току АКБ: LoEUC даёт его с минусом, когда батарея заряжается. На ходу минус - это рекуперация,
+// поэтому только на стоящем колесе и несколько снимков подряд: в конце торможения ток ещё бывает отрицательным.
+// Закончилась зарядка, когда ток поднялся выше battery_charge_end: к концу зарядки ток падает, порог ниже
+// начального, чтобы экран не мигал
+static const int32_t battery_charge_start = -1000; //mA
+static const int32_t battery_charge_end = -300; //mA
+static const uint8_t battery_charge_snapshots = 3;
+static const int32_t charge_speed_max = 1000; //km/h * 1000
 
 // метка похожа на Unix-время в мс, если попадает в 2020-2100 годы
 static const uint64_t unix_ms_min = 1577836800000ULL;
@@ -64,10 +74,36 @@ static int32_t milliToX10(int32_t v)
   return (v >= 0) ? (v + 50) / 100 : -((-v + 50) / 100);
 }
 
+// зарядка по току АКБ у колёс без признака зарядки и тока зарядки в снимке
+static bool batteryCharging(int32_t battery_current, int32_t speed)
+{
+  static uint8_t count = 0;
+  // снимки подряд: после перерыва дольше charge_max_age счёт заново
+  bool fresh = millis() - charge_rx_ms <= charge_max_age;
+  bool was = charge_valid && fresh;
+  if(!fresh) count = 0;
+
+  bool still = speed != metric_unknown && abs(speed) < charge_speed_max;
+  if(battery_current == metric_unknown || !still || battery_current > battery_charge_end)
+  {
+    count = 0;
+    return false;
+  }
+  if(was) return true;
+  if(battery_current > battery_charge_start)
+  {
+    count = 0;
+    return false;
+  }
+  if(count < battery_charge_snapshots) count++;
+  return count >= battery_charge_snapshots;
+}
+
 // метрики снимка, нужные экрану зарядки. Незнакомые коды пропускаются: снимок бывает новее прошивки
 static void parseCharge(const uint8_t* metrics, uint8_t count)
 {
   int32_t charging = metric_unknown, charge_current = metric_unknown, battery_current = metric_unknown;
+  int32_t speed = metric_unknown;
   snapshot_charge_t c = {};
   for(uint8_t i = 0; i < count; i++)
   {
@@ -79,6 +115,7 @@ static void parseCharge(const uint8_t* metrics, uint8_t count)
       case metric_charging: charging = v; break;
       case metric_charge_current: charge_current = v; break;
       case metric_battery_current: battery_current = v; break;
+      case metric_speed: speed = v; break;
       case metric_battery_temp_max:
         c.battery_temp_x10 = constrain(milliToX10(v), -999, 9999);
         c.present |= SNAP_HAS_BATTERY_TEMP;
@@ -100,7 +137,8 @@ static void parseCharge(const uint8_t* metrics, uint8_t count)
   }
 
   if(charging != metric_unknown) charge_valid = charging != 0;
-  else charge_valid = charge_current != metric_unknown && abs(charge_current) >= charge_current_min;
+  else if(charge_current != metric_unknown) charge_valid = abs(charge_current) >= charge_current_min;
+  else charge_valid = batteryCharging(battery_current, speed);
   charge_last = c;
   charge_rx_ms = millis();
 }
