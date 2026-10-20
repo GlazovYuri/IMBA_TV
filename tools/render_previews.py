@@ -34,7 +34,7 @@ HARNESS = os.path.join(ROOT, 'tools', 'previews')
 OUT = os.path.join(ROOT, 'web', 'previews')
 FONT_JS = os.path.join(ROOT, 'web', 'js', 'oled-font.js')
 SCREENS_JSON = os.path.join(ROOT, 'web', 'test', 'fixtures', 'screens.json')
-SOURCES = ['animations', 'display', 'screen_main', 'screen_grid', 'screen_info', 'screen_text', 'euc_values', 'config', 'logo', 'qr']
+SOURCES = ['animations', 'display', 'screen_main', 'screen_grid', 'screen_info', 'screen_clock', 'screen_charge', 'snapshot', 'screen_text', 'euc_values', 'config', 'logo', 'qr']
 
 W, H = 128, 64
 FRAME_BYTES = W * H // 8
@@ -44,7 +44,8 @@ SEED = 0x5EED1234
 
 # кадр для PNG: момент от начала записи, мс (у заставок первая секунда - логотип)
 POSTER_MS = {'logo': 500, 'wave': 1500, 'break': 1650, 'explosion': 1500,
-             'clawd_type': 3000, 'clawd_laptop': 3050, 'clawd_pixels': 2900, 'poweroff': 1330}
+             'clawd_type': 3000, 'clawd_laptop': 3050, 'clawd_pixels': 2900, 'poweroff': 1330,
+             'charging': 3000}
 
 
 def find_gyveroled():
@@ -239,7 +240,7 @@ def write_font(gyveroled):
     print(f'{os.path.relpath(FONT_JS, ROOT)}: {len(rows)} символов')
 
 
-SCREEN_HEAD = struct.Struct('<B4BHBBBBHBBHhHHH')
+SCREEN_HEAD = struct.Struct('<B4BHBBBBHBBHhHHHBBQH')
 
 
 def write_screens(path):
@@ -249,9 +250,9 @@ def write_screens(path):
     cases = []
     for pos in range(0, len(data), record):
         (kind, v1, v2, v3, v4, wheel, dev, charging, connected, present, speed, pwm, charge,
-         voltage, temperature, trip, interval, last) = SCREEN_HEAD.unpack_from(data, pos)
+         voltage, temperature, trip, interval, last, timezone, has_time, unix_ms, battery_max) = SCREEN_HEAD.unpack_from(data, pos)
         frame = data[pos + SCREEN_HEAD.size:pos + record]
-        cases.append({
+        case = {
             'screen': {'type': kind, 'v': [v1, v2, v3, v4]},
             'wheel_voltage_x10': wheel,
             'dev_charge': dev,
@@ -259,8 +260,16 @@ def write_screens(path):
             'data': {'is_connected': bool(connected), 'present': present, 'speed': speed, 'pwm': pwm,
                      'charge': charge, 'voltage_x10': voltage, 'temperature_x10': temperature, 'trip_x10': trip,
                      'frame_interval_ms': interval, 'frame_last_interval_ms': last},
-            'sha256': hashlib.sha256(frame).hexdigest(),
-        })
+        }
+        # батарея, узнанная по напряжению и заряду: нужна только при «Автоматически»
+        if battery_max:
+            case['data']['battery_max_x10'] = battery_max
+        # часам нужны время от телефона (нет - None) и пояс из настроек: экрану часов и экрану
+        # с двумя значениями, у которого часы в верхней строке
+        if kind == 4 or (kind == 1 and v1 == 6):
+            case['clock'] = {'unix_ms': unix_ms if has_time else None, 'timezone': timezone}
+        case['sha256'] = hashlib.sha256(frame).hexdigest()
+        cases.append(case)
     doc = {'firmware': 'dev', 'bootloader': '0.10.0', 'cases': cases}
     with open(SCREENS_JSON, 'w', encoding='utf-8') as f:
         f.write('{"firmware": "dev", "bootloader": "0.10.0", "cases": [\n')

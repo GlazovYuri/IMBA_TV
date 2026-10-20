@@ -2,6 +2,9 @@
 #include <stdint.h>
 #include "euc_data.h"
 
+// случайное число для выбора анимации: micros() и генератор SoftDevice
+uint32_t animationSeed();
+
 void displayPowerOffAnimation(uint8_t dev_charge, bool is_charging, euc_data_t& data);
 void displayPlayIntroNum(int anim, uint32_t seed, uint8_t dev_charge, bool is_charging, euc_data_t& data);
 

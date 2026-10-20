@@ -6,6 +6,10 @@
 #include "screen_main.h"
 #include "screen_grid.h"
 #include "screen_info.h"
+#include "screen_clock.h"
+#include "screen_charge.h"
+#include "snapshot.h"
+#include "animations.h"
 #include "euc_values.h"
 
 static const uint32_t blink_period_low = 1000; //ms
@@ -27,6 +31,13 @@ static const uint8_t display_modes = 5;
 static screen_t modes[display_modes];
 static uint8_t modes_cnt = 0;
 static uint8_t display_mode = 0;
+
+// экран зарядки: пока колесо заряжается, он идёт страницей после экранов из настроек (display_mode == modes_cnt).
+// Зарядка началась - экран открывается сам, кончилась - возвращается экран, который был до неё.
+// При каждом открытии оформление случайное
+static bool charge_page = false;
+static uint8_t charge_return = 0;
+static bool charge_drawn = false;  // в прошлом кадре был экран зарядки
 
 static uint8_t contrast = 255;
 
@@ -62,10 +73,10 @@ void displayInit()
   {
     screen_t s = slots[i];
     if(s.type == SCREEN_NONE) continue;
-    // у экрана с двумя значениями свои варианты: сверху заряд или напряжение, крупно скорость, ШИМ или температура
+    // у экрана с двумя значениями свои варианты: сверху заряд, напряжение или часы, крупно скорость, ШИМ или температура
     if(s.type == SCREEN_MAIN)
     {
-      if(s.v[0] != EUC_VALUE_VOLTAGE) s.v[0] = EUC_VALUE_CHARGE;
+      if(s.v[0] != EUC_VALUE_VOLTAGE && s.v[0] != EUC_VALUE_CLOCK) s.v[0] = EUC_VALUE_CHARGE;
       if(!isBigValue(s.v[1])) s.v[1] = EUC_VALUE_SPEED;
       if(!isBigValue(s.v[2])) s.v[2] = EUC_VALUE_PWM;
     }
@@ -73,6 +84,8 @@ void displayInit()
   }
   if(modes_cnt == 0) modes[modes_cnt++] = { SCREEN_MAIN, { EUC_VALUE_CHARGE, EUC_VALUE_SPEED, EUC_VALUE_PWM, EUC_VALUE_TRIP } };
   display_mode = 0;
+  charge_page = false;
+  charge_drawn = false;
 
   oled.init();
   Wire.setClock(400000);
@@ -103,10 +116,16 @@ void displayDrawLogo()
   oled.update();
 }
 
+static uint8_t pagesCount()
+{
+  return modes_cnt + (charge_page ? 1 : 0);
+}
+
 void displayNextMode()
 {
-  if(modes_cnt < 2) return;
-  display_mode = (display_mode + 1) % modes_cnt;
+  uint8_t pages = pagesCount();
+  if(pages < 2) return;
+  display_mode = (display_mode + 1) % pages;
   mode_dots_visible = true;
   mode_dots_time = millis();
 }
@@ -122,11 +141,12 @@ static void drawModeDots()
     return;
   }
 
-  int x0 = scr_width - modes_cnt * mode_slot;
+  uint8_t pages = pagesCount();
+  int x0 = scr_width - pages * mode_slot;
   int y0 = 64 - mode_slot;
   int dot = (mode_slot - mode_dot_size) / 2;
   oled.rect(x0 - 1, y0 - 1, scr_width - 1, 63, OLED_CLEAR);
-  for(int i = 0; i < modes_cnt; i++)
+  for(int i = 0; i < pages; i++)
   {
     int x = x0 + i * mode_slot;
     oled.rect(x + dot, y0 + dot, x + dot + mode_dot_size - 1, y0 + dot + mode_dot_size - 1, OLED_FILL);
@@ -138,9 +158,26 @@ void displayRenderIface(uint8_t dev_charge, bool is_charging, euc_data_t& data)
 {
   oled.clear();
 
-  const screen_t& screen = modes[display_mode];
-  // версии полезны и без телефона, поэтому экран связи и версий показывается всегда
-  if(screen.type == SCREEN_INFO) screenInfoDraw(data);
+  snapshot_charge_t charge = {};
+  bool charging = config().charge_screen && data.is_connected && snapshotCharge(charge);
+  if(charging && !charge_page)
+  {
+    charge_return = display_mode;
+    display_mode = modes_cnt;
+  }
+  if(!charging && charge_page && display_mode == modes_cnt) display_mode = charge_return;
+  charge_page = charging;
+
+  bool charge_shown = display_mode == modes_cnt;
+  if(charge_shown && !charge_drawn) screenChargeOpen((animationSeed() >> 16) % charge_styles);
+  charge_drawn = charge_shown;
+
+  const screen_t& screen = modes[display_mode < modes_cnt ? display_mode : 0];
+  if(charge_shown) screenChargeDraw(data, charge);
+  // версии полезны и без телефона, поэтому экран связи и версий показывается всегда.
+  // Часы тоже: после снимка от телефона время идёт и без связи
+  else if(screen.type == SCREEN_INFO) screenInfoDraw(data);
+  else if(screen.type == SCREEN_CLOCK) screenClockDraw();
   else if(!data.is_connected) screenNoLinkDraw(dev_charge, is_charging);
   else if(screen.type == SCREEN_GRID) screenGridDraw(data, screen.v);
   else screenMainDraw(dev_charge, is_charging, data, screen.v[0], screen.v[1], screen.v[2]);

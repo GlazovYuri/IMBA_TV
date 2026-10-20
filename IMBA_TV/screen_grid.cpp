@@ -1,7 +1,6 @@
 #include "screen_grid.h"
 #include "screen_text.h"
 #include "euc_values.h"
-#include "config.h"
 #include "GyverOLED.h"
 
 extern GyverOLED<SSH1106_128x64> oled;
@@ -41,12 +40,12 @@ static void drawUnit(int x, int y, uint8_t value)
 }
 
 // ширина самого длинного числа значения: под него оставляется место, чтобы числа не прыгали
-static int numberWidth(uint8_t value)
+static int numberWidth(uint8_t value, const euc_data_t& data)
 {
   char text[12];
   if(value == EUC_VALUE_VOLTAGE)
   {
-    uint16_t voltage_max_x10 = config().wheel_voltage_x10;
+    uint16_t voltage_max_x10 = eucVoltageMax(data);
     snprintf(text, sizeof(text), "%u.%u", voltage_max_x10 / 10, voltage_max_x10 % 10);
   }
   else if(value == EUC_VALUE_TRIP) snprintf(text, sizeof(text), "999.9");
@@ -98,7 +97,7 @@ void screenGridDraw(euc_data_t& data, const uint8_t values[4])
   int number_w[4], unit_w[4];
   for(int i = 0; i < 4; i++)
   {
-    number_w[i] = numberWidth(values[i]);
+    number_w[i] = numberWidth(values[i], data);
     unit_w[i] = unitWidth(values[i]);
   }
 

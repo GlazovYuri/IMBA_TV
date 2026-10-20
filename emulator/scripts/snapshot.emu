@@ -1,0 +1,52 @@
+# Снимок LoEUC из характеристики ...2c07: телефон шлёт его раз в секунду кусками по MTU - 3 байта.
+# Прошивка собирает куски, проверяет длину и CRC32 и берёт из снимка время. Часы стоят первым экраном
+# в поясе UTC+5, поэтому по экрану видно, какой снимок собран, а какой отброшен
+
+cfg.screen1_type=4
+cfg.timezone=68
+# 12.10.2026 12:00:04 UTC, на часах пн 17:00
+snapts=1791806404000
+button=1
+wait 900
+button=0
+wait 6000
+expect connected=1
+echo MTU 247: снимок приходит одним куском
+expect glass=scripts/refs/snapshot-mtu247.txt
+
+echo MTU 23: снимок приходит кусками по 20 байт
+mtu=23
+# 18:47:00 UTC, на часах 23:47
+snapts=1791830820000
+wait 3000
+expect glass=scripts/refs/snapshot-mtu23.txt
+
+echo снимок с неверным CRC отбрасывается: часы не меняются
+snap=0
+wait 1500
+# 01.01.2027 00:00:05 UTC, у куска 0 испорчен последний бит CRC32
+chunk=4c45010100000000000dd848c0854c450300000001a2ce8be78800
+wait 300
+expect glass=scripts/refs/snapshot-mtu23.txt
+echo тот же снимок с верным CRC принимается: на часах пт 05:00
+chunk=4c45010100000000000dd848c0844c450300000001a2ce8be78800
+wait 300
+expect glass=scripts/refs/snapshot-crc-ok.txt
+
+echo кривые куски: без куска 0, не та версия нарезки, обрывок заголовка
+chunk=4c450101000100
+chunk=4c4502000000
+chunk=4c45
+echo кусок 0 снимка из двух кусков, за ним кусок 2 вместо 1: снимок не собирается
+chunk=4c45010000000000000db6d5276c4c4503000000
+chunk=4c450101000201a2ddfefb8800
+wait 300
+expect cpu=running
+expect glass=scripts/refs/snapshot-crc-ok.txt
+
+echo после разрыва связи часы идут дальше
+drop=1
+wait 300
+expect connected=0
+expect cpu=running
+expect glass=scripts/refs/snapshot-crc-ok.txt

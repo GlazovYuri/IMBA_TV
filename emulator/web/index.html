@@ -145,7 +145,13 @@ canvas.bmp { image-rendering: pixelated; background: #000; border: 1px solid var
         <button id="drop" title="Обрыв радиосвязи; телефон переподключится сам">Обрыв связи</button>
         <button id="tx">Телеметрия</button>
         <button id="ride">Имитация поездки</button>
+        <button id="chargesim" title="Заряд растёт на 1 % в секунду, с 80 % ток падает, на 100 % зарядка кончается. Зарядка, ток и температуры идут в снимке 2c07">Имитация зарядки</button>
         <label style="min-width:0">период, мс</label><input type="number" id="interval" min="5" max="10000">
+      </div>
+      <div class="row">
+        <button id="snap" title="Раз в секунду все метрики и метка времени в характеристику ...2c07, если она есть у платы">Снимок 2c07</button>
+        <label style="min-width:0">MTU телефона</label><input type="number" id="mtu" min="23" max="517">
+        <label style="min-width:0">часы телефона, ppm</label><input type="number" id="clockppm" min="-100000" max="100000">
       </div>
       <p class="hint">Телефон с LoEUC подключается, как только плата начинает рекламу, и шлёт пакеты в характеристику. Снятая галочка означает, что поле не передаётся (INT16_MIN).</p>
       <div id="fields"></div>
@@ -240,7 +246,11 @@ $('phone').onclick = () => cmd({ phone: st.phone.enabled ? 0 : 1 });
 $('drop').onclick = () => cmd({ drop: 1 });
 $('tx').onclick = () => cmd({ tx: st.phone.tx ? 0 : 1 });
 $('ride').onclick = () => cmd({ ride: st.phone.ride ? 0 : 1 });
+$('chargesim').onclick = () => cmd({ chargesim: st.phone.chargesim ? 0 : 1 });
 $('interval').onchange = e => cmd({ interval: e.target.value });
+$('snap').onclick = () => cmd({ snap: st.phone.snap ? 0 : 1 });
+$('mtu').onchange = e => cmd({ mtu: e.target.value });
+$('clockppm').onchange = e => cmd({ clockppm: e.target.value });
 $('sendpkt').onclick = () => cmd({ packet: $('packet').value });
 $('shot').onclick = () => { const a = document.createElement('a'); a.download = 'imba_tv_' + Date.now() + '.png'; const c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(oled, 0, 0, 512, 256); a.href = c.toDataURL(); a.click(); };
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
@@ -250,7 +260,8 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
 
 // скорость и ШИМ со знаком, как в протоколе LoEUC: назад и при торможении они отрицательные;
 // напряжение до 176.4 В - самой высоковольтной батареи из настроек прошивки (42S)
-const ranges = { speed: [-30, 120, 0.1], pwm: [-100, 100, 1], volt: [0, 176.4, 0.1], charge: [0, 100, 1], temp: [-20, 100, 0.1], trip: [0, 6553, 0.1], limit: [0, 100, 1] };
+const ranges = { speed: [-30, 120, 0.1], pwm: [-100, 100, 1], volt: [0, 176.4, 0.1], charge: [0, 100, 1], temp: [-20, 100, 0.1], trip: [0, 6553, 0.1], limit: [0, 100, 1],
+  charging: [0, 1, 1], chgcur: [0, 30, 0.1], batcur: [-30, 30, 0.1], bathot: [-20, 80, 0.1], chgtemp: [-20, 100, 0.1] };
 function buildFields(fields) {
   const box = $('fields'); box.innerHTML = '';
   for (const f of fields) {
@@ -293,8 +304,11 @@ function render(s) {
 
   const p = s.phone;
   $('phone').classList.toggle('on', !!p.enabled); $('phone').textContent = p.enabled ? 'Телефон: включён' : 'Телефон: выключен';
-  $('tx').classList.toggle('on', !!p.tx); $('ride').classList.toggle('on', !!p.ride);
+  $('tx').classList.toggle('on', !!p.tx); $('ride').classList.toggle('on', !!p.ride); $('chargesim').classList.toggle('on', !!p.chargesim);
   setIfIdle($('interval'), p.interval);
+  $('snap').classList.toggle('on', !!p.snap);
+  setIfIdle($('mtu'), p.mtu);
+  setIfIdle($('clockppm'), p.clockppm);
   if (!$('fields').children.length) buildFields(p.fields);
   for (const f of p.fields) {
     setIfIdle($('p_' + f.key), !!f.present);
@@ -306,6 +320,8 @@ function render(s) {
     ['характеристика', s.ble.char ? 'запись разрешена' : 'не создана'], ['мощность передатчика', s.ble.txp + ' дБм'],
     ['интервал соединения', s.ble.ci_min + '–' + s.ble.ci_max + ' мс'], ['реклама после разрыва', yn(s.ble.restart)],
     ['принято пакетов', s.ble.rx], ['отклонено стеком', s.ble.rejected], ['номер кадра телефона', p.frame],
+    ['характеристика снимка 2c07', s.ble.snap ? 'запись разрешена' : 'не создана'],
+    ['MTU', Math.min(p.mtu, s.ble.mtu_max) + ' (плата до ' + s.ble.mtu_max + ')'], ['принято кусков снимка', s.ble.snap_rx],
   ]);
 
   $('pins').innerHTML = s.pins.map(x => {

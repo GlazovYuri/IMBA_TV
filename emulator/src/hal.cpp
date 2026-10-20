@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "shared.h"
+#include "../../IMBA_TV/config.h"
 
 using namespace emu;
 
@@ -537,7 +538,13 @@ uint32_t sd_rand_application_vector_get(uint8_t* buf, uint8_t len)
 // ===== Bluefruit =====
 
 AdafruitBluefruit Bluefruit;
-static BLECharacteristic* write_char = nullptr;
+static BLECharacteristic* write_chars[4];
+static int write_char_cnt = 0;
+
+static uint16_t charShortUuid(const BLECharacteristic* c)
+{
+  return c->uuid[0] | (c->uuid[1] << 8);
+}
 
 BLEService::BLEService(const uint8_t uuid128[16])
 {
@@ -555,9 +562,15 @@ void BLECharacteristic::begin()
 {
   if(props_ & (CHR_PROPS_WRITE | CHR_PROPS_WRITE_WO_RESP))
   {
-    if(write_char) EMU_LOG("Bluefruit: эмулятор поддерживает только одну записываемую характеристику");
-    write_char = this;
-    board->char_ready = write_perm_ != SECMODE_NO_ACCESS;
+    if(write_char_cnt == 4)
+    {
+      EMU_LOG("Bluefruit: эмулятор поддерживает до четырёх записываемых характеристик");
+      return;
+    }
+    write_chars[write_char_cnt++] = this;
+    bool writable = write_perm_ != SECMODE_NO_ACCESS;
+    if(charShortUuid(this) == kCharTelemetry) board->char_ready = writable;
+    if(charShortUuid(this) == kCharSnapshot) board->snap_ready = writable;
   }
 }
 
@@ -606,8 +619,33 @@ bool BLEAdvertising::isRunning()
   return board->adv;
 }
 
+// как в ядре Adafruit: от полосы зависит наибольший MTU, на который согласится SoftDevice
+void AdafruitBluefruit::configPrphBandwidth(uint8_t bw)
+{
+  board->mtu_max = bw == BANDWIDTH_MAX ? BLE_GATT_ATT_MTU_MAX : (bw == BANDWIDTH_HIGH ? 128 : BLE_GATT_ATT_MTU_DEFAULT);
+}
+
+// Настройки из сценария (cfg.КЛЮЧ=значение). Прошивка вызывает Bluefruit.begin() из softDeviceInit()
+// сразу после configLoad(), раньше всех, кто читает настройки: для неё подмена здесь выглядит
+// так же, как значения, которые сайт записал в образ
+static void applyConfigOverrides()
+{
+  static_assert(sizeof(fw_config_t) <= kCfgMax, "kCfgMax меньше fw_config_t");
+  fw_config_t& cfg = const_cast<fw_config_t&>(config());
+  uint8_t* p = (uint8_t*)&cfg;
+  bool any = false;
+  for(size_t i = 0; i < sizeof(fw_config_t); i++)
+  {
+    if(!board->cfg_set[i]) continue;
+    p[i] = board->cfg_val[i];
+    any = true;
+  }
+  if(any) configSanitize(cfg);
+}
+
 bool AdafruitBluefruit::begin(uint8_t, uint8_t)
 {
+  applyConfigOverrides();
   board->sd_enabled = 1;
   board->tx_power = 0;
   return true;
@@ -656,17 +694,22 @@ static void handleBle(const BleCmd& c)
       break;
     case BLE_WRITE:
     {
-      if(!board->connected || !write_char || !board->char_ready) return;
-      if(c.len > write_char->max_len_)
+      if(!board->connected) return;
+      BLECharacteristic* chr = nullptr;
+      for(int i = 0; i < write_char_cnt; i++)
+        if(charShortUuid(write_chars[i]) == c.chr) chr = write_chars[i];
+      if(!chr || chr->write_perm_ == SECMODE_NO_ACCESS) return;
+      if(c.len > chr->max_len_)
       {
         board->ble_rejected++;
-        EMU_LOG("BLE: запись %u байт отклонена стеком (max_len %u)", c.len, write_char->max_len_);
+        EMU_LOG("BLE: запись %u байт в %04x отклонена стеком (max_len %u)", c.len, c.chr, chr->max_len_);
         return;
       }
-      board->ble_rx++;
-      uint8_t buf[64];
+      if(c.chr == kCharSnapshot) board->snap_rx++;
+      else board->ble_rx++;
+      uint8_t buf[kBleWriteMax];
       memcpy(buf, c.data, c.len);
-      if(write_char->write_cb_) write_char->write_cb_(0, write_char, buf, c.len);
+      if(chr->write_cb_) chr->write_cb_(0, chr, buf, c.len);
       break;
     }
   }

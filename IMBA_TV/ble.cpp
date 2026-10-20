@@ -1,5 +1,7 @@
 #include "ble.h"
 #include "version.h"
+#include "snapshot.h"
+#include "euc_values.h"
 #include <bluefruit.h>
 
 const int8_t tx_power = 8; //dBm
@@ -13,6 +15,13 @@ const uint8_t char_uuid[] = {
   0x02, 0x2c, 0x7c, 0xd9, 0x4f, 0x2a, 0x61, 0xae,
   0x96, 0x4d, 0x1a, 0x6d, 0x9c, 0x2f, 0x0f, 0x1d,
 };
+
+// снимок LoEUC: раз в секунду все метрики колеса и метка времени, кусками по MTU - 3 байта
+const uint8_t snap_char_uuid[] = {
+  0x07, 0x2c, 0x7c, 0xd9, 0x4f, 0x2a, 0x61, 0xae,
+  0x96, 0x4d, 0x1a, 0x6d, 0x9c, 0x2f, 0x0f, 0x1d,
+};
+const uint16_t snap_chunk_max = BLE_GATT_ATT_MTU_MAX - 3;
 
 const uint16_t pack_len = 20;
 // формат пакета: https://loeuc.ru/ru/docs/devices
@@ -28,6 +37,7 @@ BLEDfu bledfu;
 BLEDis bledis;
 BLEService euc_service(service_uuid);
 BLECharacteristic euc_char(char_uuid);
+BLECharacteristic snap_char(snap_char_uuid);
 
 static euc_data_t euc_data;
 
@@ -128,12 +138,18 @@ static void dataParse(uint8_t* data)
   euc_data.present = present;
 }
 
+static void snapCharWriteCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uint16_t len)
+{
+  snapshotChunk(data, len);
+}
+
 static void eucCharWriteCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uint16_t len)
 {
   if(len != pack_len) return;
   if(!checkMagic(data)) return;
 
   dataParse(data);
+  eucBatteryDetect(euc_data);
   frameTimingUpdate();
 }
 
@@ -159,6 +175,12 @@ void bleInit(bool update_mode)
     euc_char.setFixedLen(pack_len);
     euc_char.setWriteCallback(eucCharWriteCallback);
     euc_char.begin();
+
+    snap_char.setProperties(CHR_PROPS_WRITE | CHR_PROPS_WRITE_WO_RESP);
+    snap_char.setPermission(SECMODE_NO_ACCESS, SECMODE_OPEN);
+    snap_char.setMaxLen(snap_chunk_max);
+    snap_char.setWriteCallback(snapCharWriteCallback);
+    snap_char.begin();
   }
 
   Bluefruit.Periph.setConnIntervalMS(20, 30);

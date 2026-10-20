@@ -10,6 +10,8 @@
 #include "animations.h"
 #include "config.h"
 #include "display.h"
+#include "screen_charge.h"
+#include "snapshot.h"
 #include "utils.h"
 
 // ===== Время =====
@@ -138,6 +140,7 @@ static euc_data_t sampleData()
 }
 
 static const uint8_t dev_charge = 82;
+static const uint64_t preview_unix_ms = 1792070345000ULL;  // чт 15.10.2026 13:19:05 UTC, в UTC+3 16:19
 static const uint32_t hold_iface = 1600;  // интерфейс после перехода, мс
 
 // подготовка экрана в запись не попадает: гифка начинается с первого кадра сценария
@@ -167,7 +170,8 @@ static euc_data_t wideData()
   return d;
 }
 
-static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t wheel, euc_data_t d, uint8_t dev, bool charging)
+static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t wheel, euc_data_t d, uint8_t dev, bool charging,
+                        uint8_t timezone = CONFIG_TIMEZONE_UTC_P3)
 {
   fw_config_t& cfg = configMut();
   cfg.screen1_type = type;
@@ -177,12 +181,16 @@ static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t whee
   cfg.screen1_v4 = v[3];
   cfg.screen2_type = cfg.screen3_type = cfg.screen4_type = cfg.screen5_type = 0;
   cfg.wheel_voltage_x10 = wheel;
+  cfg.timezone = timezone;
   displayInit();
   d.last_frame_ms = millis() - 10;  // кадр от телефона только что пришёл
+  // время, которое увидят часы: до отрисовки шина не занята, millis() не сдвинется
+  uint64_t unix_ms = 0;
+  bool has_time = snapshotTimeMs(unix_ms);
   displayDrawIface(dev, charging, d);
   frames.clear();
 
-  uint8_t head[32];
+  uint8_t head[48];
   int n = 0;
   head[n++] = type;
   for(int i = 0; i < 4; i++) head[n++] = v[i];
@@ -199,9 +207,54 @@ static void writeScreen(FILE* f, uint8_t type, const uint8_t v[4], uint16_t whee
   head[n++] = d.trip_x10 & 0xFF; head[n++] = d.trip_x10 >> 8;
   head[n++] = d.frame_interval_ms & 0xFF; head[n++] = d.frame_interval_ms >> 8;
   head[n++] = d.frame_last_interval_ms & 0xFF; head[n++] = d.frame_last_interval_ms >> 8;
+  head[n++] = timezone;
+  head[n++] = has_time;
+  for(int i = 0; i < 8; i++) head[n++] = unix_ms >> (i * 8);
+  head[n++] = d.battery_max_x10 & 0xFF; head[n++] = d.battery_max_x10 >> 8;
   fwrite(head, 1, n, f);
   for(int page = 0; page < 8; page++) fwrite(&ram[page][2], 1, 128, f);
 }
+
+static uint32_t crc32(const uint8_t* data, size_t len)
+{
+  uint32_t crc = 0xFFFFFFFF;
+  while(len--)
+  {
+    crc ^= *data++;
+    for(int i = 0; i < 8; i++) crc = (crc >> 1) ^ (0xEDB88320 & (0 - (crc & 1)));
+  }
+  return ~crc;
+}
+
+// метрика снимка: код и значение * 1000
+struct metric_t
+{
+  uint8_t code;
+  int32_t value;
+};
+
+// снимок LoEUC с меткой времени ts одним куском, как его пишет телефон при большом MTU
+static void feedSnapshot(uint64_t ts, const metric_t* metrics = nullptr, uint8_t count = 0)
+{
+  uint8_t snap[13 + 5 * 33] = {'L', 'E', 3, 0};
+  for(int i = 0; i < 8; i++) snap[4 + i] = ts >> (56 - i * 8);
+  snap[12] = count;
+  for(int i = 0; i < count; i++)
+  {
+    uint8_t* m = snap + 13 + i * 5;
+    m[0] = metrics[i].code;
+    for(int b = 0; b < 4; b++) m[1 + b] = (uint32_t)metrics[i].value >> (24 - b * 8);
+  }
+  uint16_t len = 13 + 5 * count;
+  uint32_t crc = crc32(snap, len);
+  uint8_t chunk[14 + sizeof(snap)] = {'L', 'E', 1, 1, 0, 0, 0, 0, (uint8_t)(len >> 8), (uint8_t)len,
+                                      (uint8_t)(crc >> 24), (uint8_t)(crc >> 16), (uint8_t)(crc >> 8), (uint8_t)crc};
+  memcpy(chunk + 14, snap, len);
+  snapshotChunk(chunk, 14 + len);
+}
+
+// колесо на зарядке: идёт зарядка, ток 8.2 А, самая горячая точка батареи 34.6 °C, зарядник 41.3 °C
+static const metric_t charging_metrics[] = {{33, 1000}, {27, 8200}, {18, 34600}, {29, 41300}};
 
 static void saveScreens(const char* path)
 {
@@ -225,6 +278,10 @@ static void saveScreens(const char* path)
       }
   const uint8_t main_default[4] = {2, 0, 1, 5};
   writeScreen(f, 1, main_default, 1512, none, 5, false);
+  // часы сверху: снимка ещё не было, на часах прочерки
+  const uint8_t main_clock[4] = {6, 0, 1, 5};
+  writeScreen(f, 1, main_clock, 1512, sample, 82, false);
+  writeScreen(f, 1, main_clock, 1512, none, 5, true);
 
   // сетка: все пары в верхней строке при разных нижних, так проходят все варианты разметки
   uint32_t rnd = 0x1234567u;
@@ -248,6 +305,54 @@ static void saveScreens(const char* path)
   euc_data_t off = sampleData();
   off.is_connected = false;
   writeScreen(f, 3, grid_default, 1512, off, 82, false);
+
+  // часы: без снимков времени нет, потом метки с разными поясами - смена суток, месяца, года и все дни недели
+  writeScreen(f, 4, grid_default, 1512, sample, 82, false);
+  const struct { uint64_t ts; uint8_t timezone; } clocks[] = {
+    {1791806430000ULL, CONFIG_TIMEZONE_UTC_P3},   // пн 12.10.2026 15:00
+    {1791892830000ULL, CONFIG_TIMEZONE_UTC_P3},   // вт 13.10 15:00
+    {1791979230000ULL, CONFIG_TIMEZONE_UTC_P5},   // ср 14.10 17:00
+    {1792065630000ULL, CONFIG_TIMEZONE_UTC_0},    // чт 15.10 12:00
+    {1792152030000ULL, CONFIG_TIMEZONE_UTC_M5},   // пт 16.10 07:00
+    {1792238430000ULL, CONFIG_TIMEZONE_UTC_P3},   // сб 17.10 15:00
+    {1792238430000ULL, CONFIG_TIMEZONE_UTC_P12},  // та же метка на Камчатке: вс 18.10 00:00
+    {1792324830000ULL, CONFIG_TIMEZONE_UTC_P14},  // вс 18.10 12:00 UTC, в UTC+14 уже пн 19.10 02:00
+    {1798756200000ULL, CONFIG_TIMEZONE_UTC_P3},   // 31.12.2026 22:30 UTC, в Москве уже пт 01.01.2027 01:30
+    {1803870900000ULL, CONFIG_TIMEZONE_UTC_M12},  // 01.03.2027 03:15 UTC, в UTC-12 ещё вс 28.02 15:15
+    {1835999999000ULL, CONFIG_TIMEZONE_UTC_0},    // пн 06.03.2028 23:59:59
+    {1835438400000ULL, CONFIG_TIMEZONE_UTC_P10},  // високосный год: вт 29.02.2028 22:00
+  };
+
+  for(const auto& c : clocks)
+  {
+    feedSnapshot(c.ts);
+    writeScreen(f, 4, grid_default, 1512, sample, 82, false, c.timezone);
+  }
+  // часы сверху на экране с двумя значениями: время последнего снимка, заряд колеса от 0 до 100 %
+  euc_data_t low = sampleData();
+  low.charge = 5;
+  euc_data_t empty = sampleData();
+  empty.charge = 0;
+  writeScreen(f, 1, main_clock, 1512, sample, 82, false, CONFIG_TIMEZONE_UTC_P3);
+  writeScreen(f, 1, main_clock, 1512, wide, 100, true, CONFIG_TIMEZONE_UTC_M5);
+  writeScreen(f, 1, main_clock, 1008, low, 9, false, CONFIG_TIMEZONE_UTC_P14);
+  writeScreen(f, 1, main_clock, 840, empty, 100, false, CONFIG_TIMEZONE_UTC_0);
+  // время идёт и без связи
+  writeScreen(f, 4, grid_default, 1512, off, 82, false);
+  // метка не похожа на Unix-время: часов нет
+  feedSnapshot(123456789ULL);
+  writeScreen(f, 4, grid_default, 1512, sample, 82, false);
+
+  // батарея «Автоматически»: пока не узнана, место под 151.2 В; узнана 20S - под 84.0 В
+  euc_data_t small = sampleData();
+  small.voltage_x10 = 812;
+  euc_data_t small_known = small;
+  small_known.battery_max_x10 = 840;
+  const uint8_t main_voltage[4] = {3, 0, 1, 5};
+  writeScreen(f, 1, main_voltage, CONFIG_WHEEL_VOLTAGE_X10_AUTO, small, 82, false);
+  writeScreen(f, 1, main_voltage, CONFIG_WHEEL_VOLTAGE_X10_AUTO, small_known, 82, false);
+  writeScreen(f, 2, grid_default, CONFIG_WHEEL_VOLTAGE_X10_AUTO, small, 82, false);
+  writeScreen(f, 2, grid_default, CONFIG_WHEEL_VOLTAGE_X10_AUTO, small_known, 82, false);
   fclose(f);
 }
 
@@ -257,7 +362,15 @@ int main(int argc, char** argv)
   uint32_t seed = argc > 2 ? strtoul(argv[2], nullptr, 0) : 0x5EED1234u;
 
   configLoad();
+
+  // кадры экранов для теста сайта первыми: в части из них снимков со временем ещё не было
+  saveScreens((out + "/screens.bin").c_str());
+
+  // заставки с настройками по умолчанию: на первом экране сверху часы, время в превью 16:19
+  fw_config_t& cfg = configMut();
+  cfg = FW_CONFIG_DEFAULTS;
   displayInit();
+  feedSnapshot(preview_unix_ms);
   euc_data_t d = sampleData();
 
   // логотип секунду, затем сразу данные
@@ -287,6 +400,31 @@ int main(int argc, char** argv)
   delay(900);
   save((out + "/poweroff.bin").c_str());
 
-  saveScreens((out + "/screens.bin").c_str());
+  // зарядка: снимок раз в секунду, экран зарядки открывается сам. Оформление при открытии случайное,
+  // здесь все по очереди, каждое со своим появлением
+  const uint32_t charge_hold[charge_styles] = {4200, 5000, 4400};
+  begin();
+  for(uint8_t style = 0; style < charge_styles; style++)
+  {
+    displayInit();
+    displaySetBrightness(100);
+    feedSnapshot(1791806430000ULL, charging_metrics, sizeof(charging_metrics) / sizeof(charging_metrics[0]));
+    d.last_frame_ms = millis();
+    displayRenderIface(dev_charge, false, d);  // открывает экран зарядки, на дисплей кадр не уходит
+    screenChargeOpen(style);
+    uint32_t start = millis(), next_snap = start + 1000;
+    while(millis() - start < charge_hold[style])
+    {
+      if((int32_t)(millis() - next_snap) >= 0)
+      {
+        feedSnapshot(1791806430000ULL, charging_metrics, sizeof(charging_metrics) / sizeof(charging_metrics[0]));
+        next_snap += 1000;
+      }
+      d.last_frame_ms = millis();
+      displayDrawIface(dev_charge, false, d);
+      delay(40);
+    }
+  }
+  save((out + "/charging.bin").c_str());
   return 0;
 }

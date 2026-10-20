@@ -1,0 +1,30 @@
+# Часы в верхней строке экрана с двумя значениями: посередине время из снимка LoEUC, в правом углу
+# заряд колеса со значком. Заряд платы слева не проверяется: он зависит от шума АЦП
+
+cfg.screen1_v1=6
+cfg.timezone=60
+snap=0
+speed=27
+pwm=41
+charge=76
+button=1
+wait 900
+button=0
+wait 6000
+expect connected=1
+echo снимка ещё не было: на часах прочерки
+expect glass=scripts/refs/clock-top-none.txt
+
+echo снимок пришёл: 12.10.2026 12:42:04 UTC, в UTC+3 на часах 15:42
+snapts=1791808924000
+snap=1
+wait 1500
+expect glass=scripts/refs/clock-top.txt
+
+echo заряд колеса 100 и 5 %: проценты прижаты к краю экрана, значок стоит перед ними
+charge=100
+wait 300
+expect glass=scripts/refs/clock-top-full.txt
+charge=5
+wait 300
+expect glass=scripts/refs/clock-top-low.txt

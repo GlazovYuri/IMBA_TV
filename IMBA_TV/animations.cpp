@@ -1036,7 +1036,7 @@ static void introClawd(void (*frame)(int, uint8_t*, const uint8_t*), int duratio
 
 // ===== Запуск =====
 
-static uint32_t introSeed()
+uint32_t animationSeed()
 {
   uint32_t seed = micros();
   uint8_t sd_on = 0;
@@ -1115,7 +1115,7 @@ void displayIntroFinish(uint8_t dev_charge, bool is_charging, euc_data_t& data)
   }
   if(!enabled_cnt) return;
 
-  uint32_t seed = introSeed();
+  uint32_t seed = animationSeed();
   int anim = enabled[(seed >> 16) % enabled_cnt];
   rnd_state = seed;
   introAnimation(anim, dev_charge, is_charging, data);

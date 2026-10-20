@@ -1,6 +1,6 @@
 #include "screen_main.h"
-#include "config.h"
 #include "euc_values.h"
+#include "screen_clock.h"
 #include "GyverOLED.h"
 
 extern GyverOLED<SSH1106_128x64> oled;
@@ -10,6 +10,12 @@ static const int scr_width = 128;
 static const uint8_t charging_bitmap[] = {
   0xff, 0x81, 0xb1, 0x99, 0x8d, 0x9d, 0xb9, 0xb1, 0x99, 0x8d, 0x81, 0xff, 0x3c, 0x3c
 };
+
+// значок у заряда колеса в углу: моноколесо сбоку 10×8, корпус с ручкой, ступица и педали
+static const uint8_t wheel_bitmap[] = {
+  0x20, 0x3c, 0x62, 0xa2, 0xbb, 0xbb, 0xa2, 0x62, 0x3c, 0x20
+};
+static const int wheel_width = 10;
 
 static void drawDevCharge(int x, int y, uint8_t charge, bool is_charging)
 {
@@ -94,7 +100,7 @@ static void drawEucVoltage(int x, int y, euc_data_t& data)
     snprintf(text, sizeof(text), "--.-");
 
   // по максимальному напряжению колеса резервируется место под текст
-  uint16_t voltage_max_x10 = config().wheel_voltage_x10;
+  uint16_t voltage_max_x10 = eucVoltageMax(data);
   char max_text[12];
   snprintf(max_text, sizeof(max_text), "%u.%u", voltage_max_x10 / 10, voltage_max_x10 % 10);
 
@@ -107,6 +113,25 @@ static void drawEucVoltage(int x, int y, euc_data_t& data)
   oled.setScale(1);
   oled.print(text);
   oled.print("В");
+}
+
+// часы посередине верхней строки, заряд колеса в правом углу: значок и проценты прижаты к краю,
+// как заряд устройства к левому. Промежуток за последним знаком ложится на край экрана
+static void drawClockTop(int y, uint8_t charge)
+{
+  char text[8] = "--:--";
+  uint32_t secs, days;
+  if(clockLocalTime(secs, days)) snprintf(text, sizeof(text), "%02u:%02u", (unsigned)(secs / 3600), (unsigned)(secs / 60 % 60));
+  int width = strlen(text) * 6 - 1;
+  oled.setScale(1);
+  oled.setCursorXY((scr_width - width) / 2, y);
+  oled.print(text);
+
+  snprintf(text, sizeof(text), "%u%%", (unsigned)constrain(charge, 0, 100));
+  int text_x = scr_width - strlen(text) * 6;
+  oled.drawBitmap(text_x - 3 - wheel_width, y, wheel_bitmap, wheel_width, 8);
+  oled.setCursorXY(text_x, y);
+  oled.print(text);
 }
 
 // подпись под крупным значением
@@ -166,6 +191,7 @@ void screenMainDraw(uint8_t dev_charge, bool is_charging, euc_data_t& data, uint
 {
   drawDevCharge(0, 1, dev_charge, is_charging);
   if(top == EUC_VALUE_VOLTAGE) drawEucVoltage(47, 1, data);
+  else if(top == EUC_VALUE_CLOCK) drawClockTop(1, data.charge);
   else drawEucCharge(47, 1, data.charge);
 
   // середины мест - как у трёх знаков слева и двух справа: x 0..67 и 72..115

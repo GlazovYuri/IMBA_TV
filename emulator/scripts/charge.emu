@@ -1,0 +1,66 @@
+# Экран зарядки: снимок LoEUC говорит, что колесо заряжается, и дисплей сам переходит на молнию.
+# Оформление при каждом открытии случайное, у всех трёх одинаковы значения вокруг, а молния анимирована:
+# она не проверяется. Заряд платы на первом экране тоже: он зависит от шума АЦП. Сверху на первом экране
+# заряд колеса, а не часы по умолчанию: время из снимка каждый раз своё
+
+cfg.screen1_v1=2
+speed=0
+pwm=0
+volt=141.8
+charge=76
+chgcur=8.2
+bathot=34.6
+chgtemp=41.3
+charging=0
+button=1
+wait 900
+button=0
+wait 6000
+expect connected=1
+echo колесо не заряжается: первый экран из настроек
+expect glass=scripts/refs/charge-main.txt
+
+echo зарядка началась: экран зарядки открывается сам, сверху 142 В и 8.2 А, снизу 35 и 41 °C, под молнией 76 %
+charging=1
+wait 6000
+expect glass=scripts/refs/charge.txt
+
+echo кнопка листает экраны: после экрана зарядки первый из настроек
+button=1
+wait 150
+button=0
+wait 2000
+expect glass=scripts/refs/charge-main.txt
+
+echo зарядка кончилась, когда открыт другой экран: он и остаётся
+charging=0
+wait 2000
+expect glass=scripts/refs/charge-main.txt
+
+echo снова зарядка, а когда она кончается, возвращается экран, который был до неё
+charging=1
+wait 6000
+expect glass=scripts/refs/charge.txt
+charging=0
+wait 2000
+expect glass=scripts/refs/charge-main.txt
+
+echo снимков нет дольше 3 секунд: зарядка на экране кончается сама
+charging=1
+wait 6000
+expect glass=scripts/refs/charge.txt
+snap=0
+wait 4500
+expect glass=scripts/refs/charge-main.txt
+
+echo без галочки «Экран зарядки колеса» экран зарядки не появляется
+snap=1
+cfg.charge_screen=false
+reset=pin
+wait 300
+button=1
+wait 900
+button=0
+wait 9000
+expect connected=1
+expect glass=scripts/refs/charge-main.txt

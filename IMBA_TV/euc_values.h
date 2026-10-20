@@ -13,16 +13,26 @@ enum
   EUC_VALUE_VOLTAGE = 3,
   EUC_VALUE_TEMPERATURE = 4,
   EUC_VALUE_TRIP = 5,
+  EUC_VALUE_CLOCK = 6,  // время из снимка LoEUC, только в верхней строке экрана с двумя значениями
 };
 
 // Типы экранов (screenN_type)
 enum
 {
   SCREEN_NONE = 0,  // экрана нет
-  SCREEN_MAIN = 1,  // два крупных значения, сверху заряд или напряжение колеса (screen_main)
+  SCREEN_MAIN = 1,  // два крупных значения, сверху заряд или напряжение колеса либо часы (screen_main)
   SCREEN_GRID = 2,  // сетка из четырёх значений (screen_grid)
   SCREEN_INFO = 3,  // связь и версии (screen_info)
+  SCREEN_CLOCK = 4, // время и дата из снимка LoEUC (screen_clock)
 };
 
 // значение текстом: "27", "141.8"; прочерки, если колесо его не прислало
 void eucValueText(uint8_t value, const euc_data_t& data, char* text, size_t size);
+
+// максимальное напряжение батареи колеса, В * 10: по нему экраны оставляют место под цифры напряжения.
+// Из настроек, а в режиме «Автоматически» узнанное по напряжению и заряду; пока не узнано, 151.2 В
+uint16_t eucVoltageMax(const euc_data_t& data);
+
+// по каждому кадру от телефона: какая батарея подходит к напряжению при этом заряде. Ответ запоминается
+// в data.battery_max_x10, когда он одинаков несколько кадров подряд, пока колесо стоит
+void eucBatteryDetect(euc_data_t& data);

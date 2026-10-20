@@ -13,6 +13,8 @@ const ADAFRUIT_VID = 0x239a;
 const VISIBLE_VERSIONS = 3;
 const SETTINGS_KEY = 'imba-tv-settings';
 const METHOD_KEY = 'imba-tv-method';
+// Прошивка по Bluetooth не отлажена: вкладка показывает, что она отключена, и прошить ей нельзя
+const BLE_FLASH = false;
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -35,7 +37,7 @@ const state = {
 };
 
 const hasSerial = serial !== null;
-const hasBluetooth = 'bluetooth' in navigator;
+const hasBluetooth = BLE_FLASH && 'bluetooth' in navigator;
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isMobile = isIOS || isAndroid;
@@ -1099,14 +1101,25 @@ function initMethods() {
 
   if (!hasSerial) {
     $('usb-unsupported').hidden = false;
-    if (isIOS) $('usb-unsupported').textContent = 'На iPhone браузеры не умеют работать с USB-устройствами. Прошейте дисплей по Bluetooth.';
-    else if (isAndroid) $('usb-unsupported').textContent = 'Этот браузер не умеет работать с USB-устройствами. Откройте страницу в Chrome, Edge или Яндекс Браузере либо прошейте дисплей по Bluetooth.';
+    if (isIOS) {
+      $('usb-unsupported').textContent = BLE_FLASH
+        ? 'На iPhone браузеры не умеют работать с USB-устройствами. Прошейте дисплей по Bluetooth.'
+        : 'На iPhone браузеры не умеют работать с USB-устройствами. Прошейте дисплей с компьютера или Android-телефона.';
+    } else if (isAndroid) {
+      $('usb-unsupported').textContent = BLE_FLASH
+        ? 'Этот браузер не умеет работать с USB-устройствами. Откройте страницу в Chrome, Edge или Яндекс Браузере либо прошейте дисплей по Bluetooth.'
+        : 'Этот браузер не умеет работать с USB-устройствами. Откройте страницу в Chrome, Edge или Яндекс Браузере.';
+    }
   }
   // на Android кабель идёт от телефона: напоминаем, какой нужен
   if (isAndroid) {
     $('usb-connect').textContent = 'Подключите IMBA TV к телефону USB-кабелем с передачей данных: USB-C на USB-C или обычным кабелем через OTG-переходник. Дисплей включится сам.';
   }
-  if (!hasBluetooth) {
+  $('ble-off').hidden = BLE_FLASH;
+  $('ble-flow').hidden = !BLE_FLASH;
+  if (!BLE_FLASH) {
+    // вкладка только объясняет, что прошивка по Bluetooth отключена
+  } else if (!hasBluetooth) {
     const note = $('ble-unsupported');
     note.hidden = false;
     if (isIOS) {
@@ -1126,7 +1139,12 @@ function initMethods() {
   if (!hasSerial && !hasBluetooth) {
     const note = $('unsupported');
     note.hidden = false;
-    if (isIOS) {
+    if (!BLE_FLASH) {
+      note.append(isIOS
+        ? 'На iPhone браузеры не умеют работать с USB, а прошивка по Bluetooth пока отключена. Прошейте дисплей с компьютера или Android-телефона. Или '
+        : 'Этот браузер не умеет работать с USB. Откройте страницу в Chrome, Edge или Яндекс Браузере. Или ',
+      link('скачайте файл', '#manual'), ' и прошейте вручную.');
+    } else if (isIOS) {
       note.append('На iPhone прошить дисплей можно по Bluetooth: откройте эту страницу в бесплатном браузере ',
         link('Bluefy', 'https://apps.apple.com/app/id1492822055'), '.');
     } else {
@@ -1142,7 +1160,7 @@ function initMethods() {
     // нет localStorage
   }
   const available = (m) => (m === 'usb' ? hasSerial : hasBluetooth);
-  let method = isMobile ? 'ble' : 'usb';
+  let method = isMobile && BLE_FLASH ? 'ble' : 'usb';
   if (saved && available(saved)) method = saved;
   else if (!available(method) && available(method === 'usb' ? 'ble' : 'usb')) method = method === 'usb' ? 'ble' : 'usb';
   selectMethod(method);

@@ -10,6 +10,8 @@ static bool button_hold = false;
 
 void softDeviceInit()
 {
+  // MTU до 247: снимок LoEUC из ...2c07 приходит одним-двумя кусками, а не десятком по 20 байт
+  Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
   Bluefruit.begin();
 }
 

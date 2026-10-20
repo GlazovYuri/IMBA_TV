@@ -19,17 +19,17 @@ expect connected=1
 expect display=on
 shot build/shot-main.png
 
-echo короткое нажатие - экран с напряжением, ещё одно - сетка
+echo короткое нажатие - сетка, ещё одно - снова первый экран
 button=1
 wait 150
 button=0
 wait 300
-shot build/shot-voltage.png
+shot build/shot-grid.png
 button=1
 wait 150
 button=0
 wait 2000
-shot build/shot-grid.png
+shot build/shot-main-again.png
 
 echo кривой пакет не должен ничего сломать
 packet=00112233

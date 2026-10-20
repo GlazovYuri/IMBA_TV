@@ -15,7 +15,7 @@ export const VALUE_NAMES = {
   [VALUE.PWM]: 'ШИМ',
   [VALUE.CHARGE]: 'Заряд колеса',
   [VALUE.VOLTAGE]: 'Напряжение колеса',
-  [VALUE.TEMPERATURE]: 'Температура',
+  [VALUE.TEMPERATURE]: 'Температура контроллера',
   [VALUE.TRIP]: 'Пробег',
   [VALUE.CLOCK]: 'Часы',
 };
@@ -430,6 +430,8 @@ export function renderScreen(screen, {
 } = {}) {
   const oled = new Oled();
   const s = normalizeScreen(screen);
+  // как eucVoltageMax: 0 в настройках - батарея узнаётся по напряжению и заряду, пока не узнана - 151.2 В
+  wheelVoltage = wheelVoltage || data.battery_max_x10 || 1512;
   // кадр от телефона пришёл только что: связь показывается, если он подключён и частота уже измерена
   const linkOk = data.is_connected && data.frame_interval_ms !== 0;
   if (s.type === SCREEN.INFO) infoDraw(oled, data, linkOk, firmware, bootloader);

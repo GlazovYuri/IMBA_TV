@@ -11,26 +11,28 @@
           "type": "u8",
           "default": 1,
           "label": "Экран 1",
-          "help": "Экраны идут по порядку, пустые пропускаются. Поля: у экрана с двумя значениями 1 - верхняя строка (заряд или напряжение), 2 и 3 - крупные значения слева и справа; у сетки 1-4 - клетки по строкам",
+          "help": "Экраны идут по порядку, пустые пропускаются. Поля: у экрана с двумя значениями 1 - верхняя строка (заряд или напряжение колеса либо часы), 2 и 3 - крупные значения слева и справа; у сетки 1-4 - клетки по строкам",
           "options": [
             { "value": 0, "id": "NONE", "label": "Нет" },
             { "value": 1, "id": "MAIN", "label": "Два значения" },
             { "value": 2, "id": "GRID", "label": "Четыре значения" },
-            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+            { "value": 3, "id": "INFO", "label": "Связь и версии" },
+            { "value": 4, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
           "key": "screen1_v1",
           "type": "u8",
-          "default": 2,
+          "default": 6,
           "label": "Экран 1, поле 1",
           "options": [
             { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -43,8 +45,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -57,8 +60,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -71,62 +75,67 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
           "key": "screen2_type",
           "type": "u8",
-          "default": 1,
+          "default": 2,
           "label": "Экран 2",
           "options": [
             { "value": 0, "id": "NONE", "label": "Нет" },
             { "value": 1, "id": "MAIN", "label": "Два значения" },
             { "value": 2, "id": "GRID", "label": "Четыре значения" },
-            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+            { "value": 3, "id": "INFO", "label": "Связь и версии" },
+            { "value": 4, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
           "key": "screen2_v1",
           "type": "u8",
-          "default": 3,
+          "default": 2,
           "label": "Экран 2, поле 1",
           "options": [
             { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
           "key": "screen2_v2",
           "type": "u8",
-          "default": 0,
+          "default": 3,
           "label": "Экран 2, поле 2",
           "options": [
             { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
           "key": "screen2_v3",
           "type": "u8",
-          "default": 1,
+          "default": 4,
           "label": "Экран 2, поле 3",
           "options": [
             { "value": 0, "id": "SPEED", "label": "Скорость, км/ч" },
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -139,20 +148,22 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
           "key": "screen3_type",
           "type": "u8",
-          "default": 2,
+          "default": 0,
           "label": "Экран 3",
           "options": [
             { "value": 0, "id": "NONE", "label": "Нет" },
             { "value": 1, "id": "MAIN", "label": "Два значения" },
             { "value": 2, "id": "GRID", "label": "Четыре значения" },
-            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+            { "value": 3, "id": "INFO", "label": "Связь и версии" },
+            { "value": 4, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -165,8 +176,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -179,8 +191,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -193,8 +206,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -207,20 +221,22 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
           "key": "screen4_type",
           "type": "u8",
-          "default": 3,
+          "default": 0,
           "label": "Экран 4",
           "options": [
             { "value": 0, "id": "NONE", "label": "Нет" },
             { "value": 1, "id": "MAIN", "label": "Два значения" },
             { "value": 2, "id": "GRID", "label": "Четыре значения" },
-            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+            { "value": 3, "id": "INFO", "label": "Связь и версии" },
+            { "value": 4, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -233,8 +249,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -247,8 +264,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -261,8 +279,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -275,8 +294,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -288,7 +308,8 @@
             { "value": 0, "id": "NONE", "label": "Нет" },
             { "value": 1, "id": "MAIN", "label": "Два значения" },
             { "value": 2, "id": "GRID", "label": "Четыре значения" },
-            { "value": 3, "id": "INFO", "label": "Связь и версии" }
+            { "value": 3, "id": "INFO", "label": "Связь и версии" },
+            { "value": 4, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -301,8 +322,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -315,8 +337,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -329,8 +352,9 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
@@ -343,17 +367,19 @@
             { "value": 1, "id": "PWM", "label": "ШИМ, %" },
             { "value": 2, "id": "CHARGE", "label": "Заряд колеса, %" },
             { "value": 3, "id": "VOLTAGE", "label": "Напряжение колеса, В" },
-            { "value": 4, "id": "TEMPERATURE", "label": "Температура, °C" },
-            { "value": 5, "id": "TRIP", "label": "Пробег, км" }
+            { "value": 4, "id": "TEMPERATURE", "label": "Температура контроллера, °C" },
+            { "value": 5, "id": "TRIP", "label": "Пробег, км" },
+            { "value": 6, "id": "CLOCK", "label": "Часы" }
           ]
         },
         {
           "key": "wheel_voltage_x10",
           "type": "u16",
-          "default": 1512,
+          "default": 0,
           "label": "Батарея колеса",
-          "help": "По максимальному напряжению рассчитывается место под цифры напряжения на экранах",
+          "help": "Дисплей узнаёт её сам по напряжению и заряду колеса, но её можно задать вручную",
           "options": [
+            { "value": 0, "id": "AUTO", "label": "Автоматически" },
             { "value": 840, "id": "20S", "label": "84 В (20S)" },
             { "value": 1008, "id": "24S", "label": "100,8 В (24S)" },
             { "value": 1260, "id": "30S", "label": "126 В (30S)" },
@@ -362,6 +388,49 @@
             { "value": 1680, "id": "40S", "label": "168 В (40S)" },
             { "value": 1764, "id": "42S", "label": "176,4 В (42S)" }
           ]
+        },
+        {
+          "key": "timezone",
+          "type": "u8",
+          "default": 60,
+          "label": "Часовой пояс",
+          "options": [
+            { "value": 0, "id": "UTC_M12", "label": "UTC-12" },
+            { "value": 4, "id": "UTC_M11", "label": "UTC-11" },
+            { "value": 8, "id": "UTC_M10", "label": "UTC-10" },
+            { "value": 12, "id": "UTC_M9", "label": "UTC-9" },
+            { "value": 16, "id": "UTC_M8", "label": "UTC-8" },
+            { "value": 20, "id": "UTC_M7", "label": "UTC-7" },
+            { "value": 24, "id": "UTC_M6", "label": "UTC-6" },
+            { "value": 28, "id": "UTC_M5", "label": "UTC-5" },
+            { "value": 32, "id": "UTC_M4", "label": "UTC-4" },
+            { "value": 36, "id": "UTC_M3", "label": "UTC-3" },
+            { "value": 40, "id": "UTC_M2", "label": "UTC-2" },
+            { "value": 44, "id": "UTC_M1", "label": "UTC-1" },
+            { "value": 48, "id": "UTC_0", "label": "UTC" },
+            { "value": 52, "id": "UTC_P1", "label": "UTC+1" },
+            { "value": 56, "id": "UTC_P2", "label": "UTC+2, Калининград" },
+            { "value": 60, "id": "UTC_P3", "label": "UTC+3, Москва, Минск, Стамбул" },
+            { "value": 64, "id": "UTC_P4", "label": "UTC+4, Самара, Тбилиси, Ереван, Баку" },
+            { "value": 68, "id": "UTC_P5", "label": "UTC+5, Екатеринбург, Ташкент, Астана" },
+            { "value": 72, "id": "UTC_P6", "label": "UTC+6, Омск, Бишкек" },
+            { "value": 76, "id": "UTC_P7", "label": "UTC+7, Новосибирск, Красноярск" },
+            { "value": 80, "id": "UTC_P8", "label": "UTC+8, Иркутск, Пекин" },
+            { "value": 84, "id": "UTC_P9", "label": "UTC+9, Якутск, Токио, Сеул" },
+            { "value": 88, "id": "UTC_P10", "label": "UTC+10, Владивосток" },
+            { "value": 92, "id": "UTC_P11", "label": "UTC+11, Магадан, Сахалин" },
+            { "value": 96, "id": "UTC_P12", "label": "UTC+12, Камчатка" },
+            { "value": 100, "id": "UTC_P13", "label": "UTC+13" },
+            { "value": 104, "id": "UTC_P14", "label": "UTC+14" }
+          ]
+        },
+        {
+          "key": "charge_screen",
+          "type": "bool",
+          "default": true,
+          "label": "Экран зарядки колеса",
+          "help": "Включается сам, пока колесо заряжается",
+          "preview": "charging"
         }
       ]
     },
@@ -508,14 +577,14 @@
     },
     {
       "title": "Обновление по Bluetooth",
-      "help": "Прошивка с телефона без кабеля",
+      "help": "Функция не отлажена и поэтому отключена. Если интересно, пинайте разработчика @glazovy",
       "fields": [
         {
           "key": "ble_update",
           "type": "bool",
-          "default": true,
+          "default": false,
           "label": "Разрешить обновление прошивки по Bluetooth",
-          "help": "Режим обновления включается, только если при включении держать кнопку около 4 секунд после того, как загорится экран, пока не заполнится полоса. Нужен заряд не ниже 30% или подключённый USB. В обычной работе прошить дисплей по Bluetooth нельзя"
+          "help": "Режим обновления включается, если при включении держать кнопку около 4 секунд. Нужен заряд не ниже 30% или подключённый USB. Прошивать в нём дисплей сайт пока не умеет"
         }
       ]
     }

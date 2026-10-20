@@ -1,0 +1,50 @@
+# Экран зарядки у колеса без признака зарядки и тока зарядки в снимке (так у всех, кроме InMotion и King Song):
+# зарядка узнаётся по току АКБ с минусом на стоящем колесе, три снимка подряд. Значения вокруг молнии
+# те же, что в charge.emu, ток на экране зарядки - модуль тока АКБ
+
+cfg.screen1_v1=2
+speed=0
+pwm=0
+volt=141.8
+charge=76
+charging=-
+chgcur=-
+batcur=0.3
+bathot=34.6
+chgtemp=41.3
+button=1
+wait 900
+button=0
+wait 6000
+expect connected=1
+echo колесо стоит, ток АКБ 0.3 А: первый экран из настроек
+expect glass=scripts/refs/charge-main.txt
+
+echo на ходу ток АКБ с минусом - это рекуперация: экран зарядки не открывается
+speed=20
+batcur=-8.2
+wait 5000
+expect glass=scripts/refs/charge-battery-ride.txt
+
+echo колесо остановилось, ток -8.2 А: пока меньше трёх снимков, экран прежний
+speed=0
+wait 1500
+expect glass=scripts/refs/charge-main.txt
+echo три снимка подряд: экран зарядки, ток 8.2 А. Ждём, пока доиграет анимация открытия
+wait 6000
+expect glass=scripts/refs/charge.txt
+
+echo к концу зарядки ток падает до -0.5 А: экран зарядки держится
+batcur=-0.5
+wait 3000
+expect glass=scripts/refs/charge-battery-low.txt
+
+echo ток -0.2 А: зарядка кончилась, возвращается первый экран
+batcur=-0.2
+wait 2000
+expect glass=scripts/refs/charge-main.txt
+
+echo ток -0.5 А мал, чтобы зарядка началась
+batcur=-0.5
+wait 5000
+expect glass=scripts/refs/charge-main.txt
