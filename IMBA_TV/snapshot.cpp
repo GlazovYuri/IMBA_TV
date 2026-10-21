@@ -16,6 +16,7 @@ static const uint16_t snap_max = 512;  // 33 метрики и поездка - 
 // коды метрик снимка, которые нужны экрану зарядки
 static const uint8_t metric_speed = 1;             // скорость, км/ч
 static const uint8_t metric_battery_current = 6;   // ток АКБ, А
+static const uint8_t metric_phase_current = 8;     // фазный ток, А
 static const uint8_t metric_battery_temp_max = 18; // температура АКБ макс., °C
 static const uint8_t metric_charge_current = 27;   // ток зарядки, А
 static const uint8_t metric_charger_temp = 29;     // температура зарядника, °C
@@ -26,15 +27,19 @@ static const int32_t metric_unknown = INT32_MIN;   // телефон эту ве
 static const uint32_t charge_max_age = 3000; //ms
 // без признака зарядки в снимке колесо считается заряжающимся по току зарядки от этого значения
 static const int32_t charge_current_min = 300; //mA
-// Признак зарядки и ток зарядки шлёт только InMotion (признак ещё King Song), у остальных колёс зарядка
-// узнаётся по току АКБ: LoEUC даёт его с минусом, когда батарея заряжается. На ходу минус - это рекуперация,
-// поэтому только на стоящем колесе и несколько снимков подряд: в конце торможения ток ещё бывает отрицательным.
-// Закончилась зарядка, когда ток поднялся выше battery_charge_end: к концу зарядки ток падает, порог ниже
-// начального, чтобы экран не мигал
+// Признак зарядки и ток зарядки шлёт только InMotion (признак ещё King Song), поэтому зарядка узнаётся и по току
+// АКБ: с минусом он идёт в батарею. На ходу минус - это рекуперация, поэтому только на стоящем колесе и несколько
+// снимков подряд: в конце торможения ток ещё бывает отрицательным. Закончилась зарядка, когда ток поднялся выше
+// battery_charge_end: к концу зарядки ток падает, порог ниже начального, чтобы экран не мигал. И выше того, что
+// берёт стоящее колесо с фарой (около 0.3 А): без знака, при стоящем моторе, это потребление похоже на зарядку
 static const int32_t battery_charge_start = -1000; //mA
-static const int32_t battery_charge_end = -300; //mA
+static const int32_t battery_charge_end = -600; //mA
 static const uint8_t battery_charge_snapshots = 3;
 static const int32_t charge_speed_max = 1000; //km/h * 1000
+// Знак тока АКБ при зарядке у разных колёс разный. Когда мотор не работает (фазный ток меньше этого), стоящему
+// колесу тратить ампер и больше не на что, и ток любого знака - это зарядка. Мотор, который держит колесо
+// с райдером на склоне, берёт фазный ток в десятки ампер
+static const int32_t motor_idle_current = 2000; //mA
 
 // метка похожа на Unix-время в мс, если попадает в 2020-2100 годы
 static const uint64_t unix_ms_min = 1577836800000ULL;
@@ -74,8 +79,8 @@ static int32_t milliToX10(int32_t v)
   return (v >= 0) ? (v + 50) / 100 : -((-v + 50) / 100);
 }
 
-// зарядка по току АКБ у колёс без признака зарядки и тока зарядки в снимке
-static bool batteryCharging(int32_t battery_current, int32_t speed)
+// зарядка по току АКБ на стоящем колесе
+static bool batteryCharging(int32_t battery_current, int32_t phase_current, int32_t speed)
 {
   static uint8_t count = 0;
   // снимки подряд: после перерыва дольше charge_max_age счёт заново
@@ -84,6 +89,8 @@ static bool batteryCharging(int32_t battery_current, int32_t speed)
   if(!fresh) count = 0;
 
   bool still = speed != metric_unknown && abs(speed) < charge_speed_max;
+  bool motor_idle = phase_current != metric_unknown && abs(phase_current) < motor_idle_current;
+  if(battery_current != metric_unknown && motor_idle) battery_current = -abs(battery_current);
   if(battery_current == metric_unknown || !still || battery_current > battery_charge_end)
   {
     count = 0;
@@ -103,7 +110,7 @@ static bool batteryCharging(int32_t battery_current, int32_t speed)
 static void parseCharge(const uint8_t* metrics, uint8_t count)
 {
   int32_t charging = metric_unknown, charge_current = metric_unknown, battery_current = metric_unknown;
-  int32_t speed = metric_unknown;
+  int32_t speed = metric_unknown, phase_current = metric_unknown;
   snapshot_charge_t c = {};
   for(uint8_t i = 0; i < count; i++)
   {
@@ -116,6 +123,7 @@ static void parseCharge(const uint8_t* metrics, uint8_t count)
       case metric_charge_current: charge_current = v; break;
       case metric_battery_current: battery_current = v; break;
       case metric_speed: speed = v; break;
+      case metric_phase_current: phase_current = v; break;
       case metric_battery_temp_max:
         c.battery_temp_x10 = constrain(milliToX10(v), -999, 9999);
         c.present |= SNAP_HAS_BATTERY_TEMP;
@@ -136,9 +144,12 @@ static void parseCharge(const uint8_t* metrics, uint8_t count)
     c.present |= SNAP_HAS_CURRENT;
   }
 
-  if(charging != metric_unknown) charge_valid = charging != 0;
-  else if(charge_current != metric_unknown) charge_valid = abs(charge_current) >= charge_current_min;
-  else charge_valid = batteryCharging(battery_current, speed);
+  // признак зарядки, а без него ток зарядки. Признак 0 ток АКБ не перебивает: колесо, которое шлёт признак,
+  // не обязательно его заполняет
+  bool flagged;
+  if(charging != metric_unknown) flagged = charging != 0;
+  else flagged = charge_current != metric_unknown && abs(charge_current) >= charge_current_min;
+  charge_valid = batteryCharging(battery_current, phase_current, speed) || flagged;
   charge_last = c;
   charge_rx_ms = millis();
 }
