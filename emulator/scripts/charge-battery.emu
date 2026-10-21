@@ -34,17 +34,44 @@ echo три снимка подряд: экран зарядки, ток 8.2 А.
 wait 6000
 expect glass=scripts/refs/charge.txt
 
-echo к концу зарядки ток падает до -0.5 А: экран зарядки держится
-batcur=-0.5
+echo к концу зарядки ток падает до -0.8 А: экран зарядки держится
+batcur=-0.8
 wait 3000
 expect glass=scripts/refs/charge-battery-low.txt
 
-echo ток -0.2 А: зарядка кончилась, возвращается первый экран
-batcur=-0.2
+echo ток -0.4 А: зарядка кончилась, возвращается первый экран
+batcur=-0.4
 wait 2000
 expect glass=scripts/refs/charge-main.txt
 
-echo ток -0.5 А мал, чтобы зарядка началась
-batcur=-0.5
+echo ток -0.8 А мал, чтобы зарядка началась
+batcur=-0.8
+wait 5000
+expect glass=scripts/refs/charge-main.txt
+
+echo признак зарядки 0 в снимке не мешает: ток АКБ -8.2 А на стоящем колесе
+charging=0
+batcur=-8.2
+wait 6000
+expect glass=scripts/refs/charge.txt
+batcur=0.3
+wait 2000
+expect glass=scripts/refs/charge-main.txt
+
+echo ток АКБ с плюсом, как у LeaperKim Lynx S, при стоящем моторе (фазный ток 0.1 А): тоже зарядка
+charging=-
+phasecur=0.1
+batcur=8.2
+wait 6000
+expect glass=scripts/refs/charge.txt
+echo мотор держит колесо (фазный ток 30 А): ток с плюсом - это расход, экран зарядки закрывается
+phasecur=30
+wait 2000
+expect glass=scripts/refs/charge-main.txt
+wait 4000
+expect glass=scripts/refs/charge-main.txt
+
+echo без фазного тока в снимке ток с плюсом зарядкой не считается
+phasecur=-
 wait 5000
 expect glass=scripts/refs/charge-main.txt

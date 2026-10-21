@@ -268,7 +268,7 @@ struct Phone
                       std::chrono::system_clock::now().time_since_epoch()).count();
   double trip_ms = 0;
   uint64_t next_snap = 0;
-  Field fields[12] = {
+  Field fields[13] = {
     {"speed", "скорость, км/ч", 25, true, 6, 1},
     {"pwm", "ШИМ, %", 40, true, 8, 2},
     {"volt", "напряжение, В", 100.8, true, 10, 3},
@@ -279,6 +279,7 @@ struct Phone
     {"charging", "зарядка идёт (0 или 1), снимок", 0, true, -1, 33},
     {"chgcur", "ток зарядки, А, снимок", 8.2, true, -1, 27},
     {"batcur", "ток АКБ, А (минус - заряд), снимок", 0.3, true, -1, 6},
+    {"phasecur", "фазный ток, А, снимок", 0, true, -1, 8},
     {"bathot", "самая горячая точка АКБ, °C, снимок", 34.6, true, -1, 18},
     {"chgtemp", "температура зарядника, °C, снимок", 41.3, true, -1, 29},
   };
